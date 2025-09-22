@@ -1,9 +1,11 @@
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 
 use sdl3::{event::Event, keyboard::Keycode, pixels::Color, render::{Canvas, FRect}, video::{Window, WindowPos}};
 
 mod audio;
 mod synth;
+
+const FRAME_RATE: usize = 60;
 
 fn main() {
     //unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
@@ -41,6 +43,6 @@ fn main() {
             }
         }
         
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_secs_f64(1.0 / FRAME_RATE as f64));
     }
 }

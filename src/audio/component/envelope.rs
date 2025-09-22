@@ -1,12 +1,12 @@
 use std::time::Instant;
 
-pub const GATE: usize = 0;
-pub const VELOCITY: usize = 1;
-const ATTACK: usize = 2;
-const DECAY: usize = 3;
-const RELEASE: usize = 4;
-const SUSTAIN: usize = 5;
-pub const INPUT_COUNT: usize = 6;
+const GATE: usize = 0;
+const VELOCITY: usize = 1;
+// const ATTACK: usize = 2;
+// const DECAY: usize = 3;
+// const RELEASE: usize = 4;
+// const SUSTAIN: usize = 5;
+const INPUT_COUNT: usize = 2;
 
 const OUT_VALUE: usize = 0;
 const OUTPUT_COUNT: usize = 1;
@@ -34,19 +34,23 @@ impl Envelope {
             inputs: env_inputs,
             outputs: env_outputs,
             attack: 0.02,
-            decay: 0.1,
-            release: 0.1,
+            decay: 1.6,
+            release: 0.5,
             sustain: 0.0,
             ..Default::default()
         }
     }
 
-    pub fn get_outputs(&self) -> usize {
+    pub fn get_output(&self) -> usize {
         self.outputs
     }
 
-    pub fn get_inputs(&self) -> usize {
-        self.inputs
+    pub fn get_gate_input(&self) -> usize {
+        self.inputs + GATE
+    }
+
+    pub fn get_velocity_input(&self) -> usize {
+        self.inputs + VELOCITY
     }
 }
 
@@ -61,9 +65,11 @@ pub fn envelope_system(envelopes: &mut [Envelope], inputs: &[f32], outputs: &mut
             }
         } else {
             if let None = envelope.released {
-                envelope.start = None;
-                envelope.released = Some(Instant::now());
-                envelope.release_start_value = outputs[envelope.outputs] / velocity;
+                if let Some(_) = envelope.start {
+                    envelope.start = None;
+                    envelope.released = Some(Instant::now());
+                    envelope.release_start_value = outputs[envelope.outputs] / velocity;
+                }
             }
         }
         let out = if let Some(start_time) = envelope.start {
@@ -80,9 +86,14 @@ pub fn envelope_system(envelopes: &mut [Envelope], inputs: &[f32], outputs: &mut
             }
         } else if let Some(released_time) = envelope.released {
             let elapsed = released_time.elapsed().as_secs_f32();
-
-            let raw = envelope.release_start_value * (1.0 - (elapsed / envelope.release).powf(0.4));
-            raw.max(0.0)
+            let elapsed_ratio = elapsed / envelope.release;
+    
+            if elapsed_ratio < 1.0 {
+                envelope.release_start_value * (1.0 - (elapsed_ratio).powf(0.4))
+            } else {
+                envelope.released = None;
+                0.0
+            }
         } else {
             0.0
         };

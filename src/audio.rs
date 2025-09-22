@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use component::envelope::Envelope;
 use component::analog::AnalogOscillator;
 use component::cable::Cable;
+use component::filter::Filter;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Host, SizedSample, StreamConfig, SupportedStreamConfig, I24};
 
@@ -56,7 +57,7 @@ where
 {
     let num_channels = config.channels as usize;
     assert!(num_channels == 2);
-    let sample_rate = config.sample_rate.0 as usize;
+    let sample_rate = config.sample_rate.0 as f64;
     let mut audio_state = AudioState::new(receiver, sample_rate);
 
     let err_fn = |err| eprintln!("Erroring building output sound stream: {err}");
@@ -75,10 +76,10 @@ where
     ).map_err(|err| format!("Failed to create audio output stream: {err}"))
 }
 
-const BUFFER_SIZE: usize = 256;
-const MAX_OSCILLATORS: usize = 16;
-const MAX_ENVELOPES: usize = 16;
-const MAX_CABLES: usize = 2048;
+const MAX_OSCILLATORS: usize = 128;
+const MAX_ENVELOPES: usize = 256;
+const MAX_FILTERS: usize = 128;
+const MAX_CABLES: usize = 4096;
 
 #[derive(Clone, Copy, Debug)]
 pub enum AudioMessage {
@@ -146,17 +147,18 @@ impl <T: Default, const MAX: usize> DerefMut for ComponentVec<T, MAX> {
 
 struct AudioState {
     receiver: mpsc::Receiver<AudioMessage>,
-    sample_rate: usize,
+    sample_rate: f64,
     inputs: Vec<f32>,
     outputs: Vec<f32>,
     midi: Midi,
     analogs: ComponentVec<AnalogOscillator, MAX_OSCILLATORS>,
     envelopes: ComponentVec<Envelope, MAX_ENVELOPES>,
+    filters: ComponentVec<Filter, MAX_FILTERS>,
     cables: ComponentVec<Cable, MAX_CABLES>,
 }
 
 impl AudioState {
-    pub fn new(receiver: mpsc::Receiver<AudioMessage>, sample_rate: usize) -> Self {
+    pub fn new(receiver: mpsc::Receiver<AudioMessage>, sample_rate: f64) -> Self {
         let mut outputs = Vec::new();
         let midi = Midi::new(&mut outputs);
         let mut new_state = Self {
@@ -168,39 +170,64 @@ impl AudioState {
             analogs: ComponentVec::new(),
             cables: ComponentVec::new(),
             envelopes: ComponentVec::new(),
+            filters: ComponentVec::new(),
         };
 
-        for i in 0..new_state.midi.voices() {
-            new_state.envelopes.push(Envelope::new(&mut new_state.inputs, &mut new_state.outputs)).unwrap();
-            new_state.cables.push(
-                Cable::new(new_state.midi.get_voice_gate(i), new_state.envelopes[i].get_inputs() + envelope::GATE, 1.0)
-            ).unwrap();
-            new_state.cables.push(
-                Cable::new(new_state.midi.get_voice_velocity(i), new_state.envelopes[i].get_inputs() + envelope::VELOCITY, 1.0)
-            ).unwrap();
-        }
-        for i in 0..new_state.midi.voices() {
-            new_state.analogs.push(AnalogOscillator::new(&mut new_state.inputs, &mut new_state.outputs, new_state.sample_rate as f64)).unwrap();
-            new_state.cables.push(
-                Cable::new(new_state.midi.get_voice_note(i), new_state.analogs[i].get_inputs() + analog::FREQUENCY, 1.0)
-            ).unwrap();
-            new_state.cables.push(
-                Cable::new(new_state.envelopes[i].get_outputs(), new_state.analogs[i].get_inputs(), 1.0)
-            ).unwrap();
-        }
-        for analog in new_state.analogs.iter() {
-            new_state.cables.push(Cable::new(analog.get_outputs(), 0, 0.3)).unwrap();
-            new_state.cables.push(Cable::new(analog.get_outputs(), 1, 0.3)).unwrap();
-        }
+        new_state.init();
         new_state
+    }
+
+    pub fn init(&mut self) {
+        for i in 0..self.midi.voices() {
+            self.envelopes.push(Envelope::new(&mut self.inputs, &mut self.outputs)).unwrap();
+            self.cables.push(
+                Cable::new(self.midi.get_voice_gate(i), self.envelopes[i].get_gate_input(), 1.0)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.midi.get_voice_velocity(i), self.envelopes[i].get_velocity_input(), 1.0)
+            ).unwrap();
+        }
+        for i in 0..self.midi.voices() {
+            self.analogs.push(AnalogOscillator::new(&mut self.inputs, &mut self.outputs)).unwrap();
+            self.cables.push(
+                Cable::new(self.midi.get_voice_note(i), self.analogs[i].get_freq_input(), 1.0)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.envelopes[i].get_output(), self.analogs[i].get_level_input(), 1.0)
+            ).unwrap();
+        }
+        for i in 0..self.midi.voices() {
+            self.envelopes.push(Envelope::new(&mut self.inputs, &mut self.outputs)).unwrap();
+            self.cables.push(
+                Cable::new(self.midi.get_voice_gate(i), self.envelopes[i + self.midi.voices()].get_gate_input(), 1.0)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.midi.get_voice_velocity(i), self.envelopes[i + self.midi.voices()].get_velocity_input(), 1.0)
+            ).unwrap();
+            self.filters.push(Filter::new(&mut self.inputs, &mut self.outputs)).unwrap();
+            self.cables.push(
+                Cable::new(self.analogs[i].get_output(), self.filters[i].get_value_input(), 1.0)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.envelopes[i + self.midi.voices()].get_output(), self.filters[i].get_freq_input(), 0.7)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.midi.get_voice_note(i), self.filters[i].get_freq_input(), 1.0)
+            ).unwrap();
+        }
+        for filter in self.filters.iter() {
+            self.cables.push(Cable::new(filter.get_output(), 0, 0.3)).unwrap();
+            self.cables.push(Cable::new(filter.get_output(), 1, 0.3)).unwrap();
+        }
     }
 }
 
 impl AudioState {
     fn process(&mut self) -> (f32, f32) {
         self.midi.process(&mut self.outputs);
-        component::analog::analog_oscillator_system(&mut self.analogs, &self.inputs, &mut self.outputs);
+        component::analog::analog_oscillator_system(&mut self.analogs, &self.inputs, &mut self.outputs, self.sample_rate);
         component::envelope::envelope_system(&mut self.envelopes, &self.inputs, &mut self.outputs);
+        component::filter::butterworth_system(&mut self.filters, &self.inputs, &mut self.outputs, self.sample_rate);
         component::cable::cable_system(&self.cables, &mut self.inputs, &self.outputs);
         (self.inputs[0], self.inputs[1])
     }

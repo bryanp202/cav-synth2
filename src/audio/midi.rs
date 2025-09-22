@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-const POLY_VOICE_COUNT: usize = 16;
+const POLY_VOICE_COUNT: usize = 32;
 const GATE: usize = 0;
 const NOTE: usize = 1;
 const VELOCITY: usize = 2;
