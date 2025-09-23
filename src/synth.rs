@@ -6,7 +6,7 @@ use crate::audio::AudioMessage;
 
 pub struct Synth {
     audio_channel: Sender<AudioMessage>,
-    _midi_connection: MidiInputConnection<()>,
+    _midi_connection: Option<MidiInputConnection<()>>,
     _stream: cpal::Stream,
 }
 
@@ -15,7 +15,9 @@ impl Synth {
         let (audio_sender, audio_receiver) = mpsc::channel();
         let _stream = crate::audio::init(audio_receiver).expect("Failed to initialize audio thread");
         println!("Audio thread initialized");
-        let _midi_connection = midi::setup_midi(audio_sender.clone()).expect("Failed to setup midi connection");
+        let _midi_connection = midi::setup_midi(audio_sender.clone())
+            .map_err(|err| eprintln!("{}", err))
+            .ok();
         println!("Midi connected");
 
         Self {

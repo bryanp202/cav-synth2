@@ -1,19 +1,18 @@
 use std::sync::mpsc::Sender;
 use crate::audio::AudioMessage;
 
-use midir::ConnectError;
 use midir::MidiInput;
 use midir::Ignore;
 use midir::MidiInputConnection;
 
-pub fn setup_midi(output: Sender<AudioMessage>) -> Result<MidiInputConnection<()>, ConnectError<MidiInput>> {
-    let mut midi_in = MidiInput::new("cav-synth").expect("No midi found");
+pub fn setup_midi(output: Sender<AudioMessage>) -> Result<MidiInputConnection<()>, String> {
+    let mut midi_in = MidiInput::new("cav-synth").map_err(|err| err.to_string())?;
     midi_in.ignore(Ignore::TimeAndActiveSense);
 
     let in_ports = midi_in.ports();
     println!("Midi port count: {}", in_ports.len());
     if in_ports.len() < 1 {
-        panic!("No midi ports found");
+        return Err(String::from("No midi ports found"));
     }
     let in_port = &in_ports[0];
 
@@ -47,5 +46,5 @@ pub fn setup_midi(output: Sender<AudioMessage>) -> Result<MidiInputConnection<()
             }
         },
         (),
-    )
+    ).map_err(|err| err.to_string())
 }
