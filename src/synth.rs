@@ -14,11 +14,9 @@ impl Synth {
     pub fn init() -> Self {
         let (audio_sender, audio_receiver) = mpsc::channel();
         let _stream = crate::audio::init(audio_receiver).expect("Failed to initialize audio thread");
-        println!("Audio thread initialized");
         let _midi_connection = midi::setup_midi(audio_sender.clone())
             .map_err(|err| eprintln!("{}", err))
             .ok();
-        println!("Midi connected");
 
         Self {
             audio_channel: audio_sender,

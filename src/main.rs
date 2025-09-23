@@ -41,6 +41,7 @@ fn main() {
     let mut cables: Vec<(FPoint, FPoint)> = Vec::new();
     let mut mouse_down = false;
     let mut angle = 0.0;
+    let mut angle2 = 0.0;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -67,12 +68,13 @@ fn main() {
                     window_pos = (w_x as f32 + x, w_y as f32 + y);
                     canvas.window_mut().set_position(WindowPos::Positioned(window_pos.0 as i32), WindowPos::Positioned(window_pos.1 as i32));
                 },
-                Event::MouseMotion { x, y, xrel, .. }
+                Event::MouseMotion { x, y, xrel, yrel, .. }
                 if mouse_down => {
                     if let Some(start) = start {
                         end = Some(FPoint::new(x, y));
                     }
                     angle = (angle + xrel as f64 / 10.0).clamp(0.0, 360.0);
+                    angle2 = (angle2 + yrel as f64 / 10.0).clamp(0.0, 360.0);
                 },
                 _ => {},
             }
@@ -84,6 +86,11 @@ fn main() {
             &texture,
             FRect::new(0.0, (angle / 360.0 * (knob.height() - knob.width()) as f64 / 64.0).floor() as f32 * 64.0, 64.0, 64.0),
             FRect::new(0.0, 0.0, 64.0, 64.0),
+        ).unwrap();
+        canvas.copy(
+            &texture,
+            FRect::new(0.0, (angle2 / 360.0 * (knob.height() - knob.width()) as f64 / 64.0).floor() as f32 * 64.0, 64.0, 64.0),
+            FRect::new(64.0, 0.0, 64.0, 64.0),
         ).unwrap();
         for &(start, end) in cables.iter() {
             draw_cable(&mut canvas, start, end, 8.0);
