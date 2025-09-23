@@ -9,3 +9,4 @@ rand = "0.8"
 sdl3-src = { version = "*" } 
 sdl3 = { version = "0.14.42", features = ["build-from-source-static", "ttf"] }
 cpal = "0.16.0"
+image = "0.25"

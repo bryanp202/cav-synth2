@@ -8,7 +8,7 @@ pub enum WaveShape {
 
 impl Default for WaveShape {
     fn default() -> Self {
-        Self::Square
+        Self::Sine
     }
 }
 

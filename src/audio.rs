@@ -3,7 +3,6 @@ mod midi;
 
 use std::ops::{Deref, DerefMut};
 use std::sync::mpsc;
-use std::time::{Duration, Instant};
 
 use component::envelope::Envelope;
 use component::analog::AnalogOscillator;
@@ -12,7 +11,6 @@ use component::filter::Filter;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Host, SizedSample, StreamConfig, SupportedStreamConfig, I24};
 
-use crate::audio::component::{analog, envelope};
 use crate::audio::midi::Midi;
 
 pub fn init(receiver: mpsc::Receiver<AudioMessage>) -> Result<cpal::Stream, String> {
@@ -121,14 +119,6 @@ impl <T: Default, const MAX: usize> ComponentVec<T, MAX> {
             self.components.swap(index, self.count);
         }
         Ok(removed)
-    }
-
-    pub fn get(&self, index: usize) -> &T {
-        &self.components[index]
-    }
-
-    pub fn get_mut(&mut self, index: usize) -> &mut T {
-        &mut self.components[index]
     }
 }
 
