@@ -1,7 +1,6 @@
 mod component;
 mod midi;
 
-use std::ops::{Deref, DerefMut};
 use std::sync::mpsc;
 
 use component::envelope::Envelope;
@@ -10,6 +9,7 @@ use component::cable::Cable;
 use component::filter::Filter;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Host, SizedSample, StreamConfig, SupportedStreamConfig, I24};
+use crate::common::ComponentVec;
 
 use crate::audio::midi::Midi;
 
@@ -81,58 +81,11 @@ const MAX_CABLES: usize = 4096;
 
 #[derive(Clone, Copy, Debug)]
 pub enum AudioMessage {
+    Osc1Freq(f32),
     KeyPress(u8, u8),
     KeyRelease(u8),
     PedalPress,
     PedalRelease,
-}
-
-struct ComponentVec<T: Default, const MAX: usize> {
-    components: [T; MAX],
-    count: usize,
-}
-
-impl <T: Default, const MAX: usize> ComponentVec<T, MAX> {
-    pub fn new() -> Self {
-        Self {
-            components: std::array::from_fn(|_| T::default()),
-            count: 0,
-        }
-    }
-
-    pub fn push(&mut self, new_component: T) -> Result<(), ()> {
-        if self.count == MAX {
-            return Err(());
-        }
-        self.components[self.count] = new_component;
-        self.count += 1;
-        Ok(())
-    }
-
-    pub fn remove(&mut self, index: usize) -> Result<T, ()> {
-        if index >= self.count {
-            return Err(());
-        }
-        let removed = std::mem::take(&mut self.components[index]);
-        if index + 1 != self.count {
-            self.count -= 1;
-            self.components.swap(index, self.count);
-        }
-        Ok(removed)
-    }
-}
-
-impl <T: Default, const MAX: usize> Deref for ComponentVec<T, MAX> {
-    type Target = [T];
-    fn deref(&self) -> &Self::Target {
-        &self.components[0..self.count]   
-    }
-}
-
-impl <T: Default, const MAX: usize> DerefMut for ComponentVec<T, MAX> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.components[0..self.count]
-    }
 }
 
 struct AudioState {
@@ -225,6 +178,11 @@ impl AudioState {
     fn update(&mut self) {
         for msg in self.receiver.try_iter() {
             match msg {
+                AudioMessage::Osc1Freq(freq) => {
+                    for analog in &mut self.analogs as &mut [AnalogOscillator] {
+                        analog.set_freq_value((freq - 0.5) /10.0);
+                    }
+                },
                 AudioMessage::KeyPress(velocity, note) => self.midi.key_press(&mut self.outputs, note, velocity),
                 AudioMessage::KeyRelease(note) => self.midi.key_release(&mut self.outputs, note),
                 AudioMessage::PedalPress => self.midi.pedal_press(),

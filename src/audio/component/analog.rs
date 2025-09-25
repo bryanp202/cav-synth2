@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub enum WaveShape {
     Saw,
@@ -8,7 +9,7 @@ pub enum WaveShape {
 
 impl Default for WaveShape {
     fn default() -> Self {
-        Self::Sine
+        Self::Saw
     }
 }
 
@@ -42,6 +43,10 @@ impl AnalogOscillator {
             outputs: analog_outputs,
             ..Default::default()
         }
+    }
+
+    pub fn set_freq_value(&mut self, freq: f32) {
+        self.frequency = freq;
     }
 
     pub fn get_output(&self) -> usize {
