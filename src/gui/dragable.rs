@@ -2,7 +2,7 @@ use std::sync::mpsc;
 
 use sdl3::{render::{Canvas, FRect, Texture}, video::Window};
 
-use crate::{audio::AudioMessage, common::ComponentVec, gui::animation::Animation};
+use crate::{audio::AudioMessage, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
 
 const MAX_DRAGABLE_COUNT: usize = 228;
 
@@ -64,12 +64,13 @@ impl Dragables {
 
 pub fn on_left_down_system(audio_channel: &mut mpsc::Sender<AudioMessage>, dragables: &mut Dragables, x: f32, y: f32, clicks: u8) {
     for (i, rect) in dragables.rect.iter().enumerate() {
-        if x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h {
+        if point_in_frect(rect, x, y) {
             if clicks == 2 {
                 match dragables.on_double_click[i] {
                     OnDoubleClickBehavior::SetTo(value) => {
                         let (_, on_drag) = dragables.on_drag[i];
-                        on_drag_behavior(audio_channel, &mut dragables.value[i], on_drag, value);
+                        let animation_frames = dragables.render[i].get_frame_count();
+                        on_drag_behavior(audio_channel, &mut dragables.value[i], on_drag, value, animation_frames);
                     },
                 }
             }
@@ -86,7 +87,8 @@ pub fn on_mouse_move_system(audio_channel: &mut mpsc::Sender<AudioMessage>, drag
             DragType::VERTICAL => -yrel/200.0,
         };
         let new_value = (dragables.value[dragable_index] + drag_amt).clamp(0.0, 1.0);
-        on_drag_behavior(audio_channel, &mut dragables.value[dragable_index], on_drag, new_value);
+        let animation_frames = dragables.render[dragable_index].get_frame_count();
+        on_drag_behavior(audio_channel, &mut dragables.value[dragable_index], on_drag, new_value, animation_frames);
     }
 }
 
@@ -103,9 +105,14 @@ pub fn render_system(canvas: &mut Canvas<Window>, textures: &[Texture], dragable
     Ok(())
 }
 
-fn on_drag_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, value: &mut f32, on_drag: OnDragBehavior, new_value: f32) {
+fn on_drag_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, value: &mut f32, on_drag: OnDragBehavior, new_value: f32, animation_frames: usize) {
+    let old_frame = ((animation_frames - 1) as f32 * *value) as usize;
+    let new_frame = (animation_frames - 1) as f32 * new_value;
     *value = new_value;
-    match on_drag {
-        OnDragBehavior::Osc1Freq => audio_channel.send(AudioMessage::Osc1Freq(new_value)).unwrap(),
+    if old_frame != new_frame as usize {
+        let send_value = new_frame / animation_frames as f32;
+        match on_drag {
+            OnDragBehavior::Osc1Freq => audio_channel.send(AudioMessage::Osc1Freq(send_value)).unwrap(),
+        }
     }
 }

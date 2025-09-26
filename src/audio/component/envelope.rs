@@ -76,13 +76,13 @@ pub fn envelope_system(envelopes: &mut [Envelope], inputs: &[f32], outputs: &mut
             let elapsed = start_time.elapsed().as_secs_f32();
             if elapsed < envelope.attack {
                 1.0 * elapsed / envelope.attack
-            } else {
+            } else if elapsed - envelope.attack < envelope.decay {
                 let since_decay = elapsed - envelope.attack;
                 let peak_sustain_delta = 1.0 - envelope.sustain;
 
-                let raw = 1.0 - peak_sustain_delta * since_decay / envelope.decay;
-
-                raw.max(envelope.sustain)
+                1.0 - peak_sustain_delta * since_decay / envelope.decay
+            } else {
+                envelope.sustain
             }
         } else if let Some(released_time) = envelope.released {
             let elapsed = released_time.elapsed().as_secs_f32();

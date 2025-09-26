@@ -1,5 +1,7 @@
 use std::{mem::MaybeUninit, ops::{Deref, DerefMut}};
 
+use sdl3::render::{FPoint, FRect};
+
 
 /// Does not work well with type T that require drop behavior
 pub struct ComponentVec<T, const MAX: usize> {
@@ -24,20 +26,21 @@ impl <T, const MAX: usize> ComponentVec<T, MAX> {
         Ok(())
     }
 
-    pub fn remove(&mut self, index: usize) -> Result<T, ()> {
+    #[allow(dead_code)]
+    pub fn remove(&mut self, index: usize) -> T {
         if index >= self.count {
-            return Err(());
+            panic!("Out of bounds remove");
         }
         let removed = unsafe { self.components[index].assume_init_read() };
-        if index + 1 != self.count {
-            self.count -= 1;
+        self.count -= 1;
+        if index != self.count {
             self.components.swap(index, self.count);
         }
-        Ok(removed)
+        removed
     }
 
-    pub fn iter(&self) -> ComponentVecIter<T, MAX> {
-        ComponentVecIter::new(self)
+    pub fn iter(&self) -> std::slice::Iter<T> {
+        (self as &[T]).iter()
     }
 }
 
@@ -54,32 +57,10 @@ impl <T, const MAX: usize> DerefMut for ComponentVec<T, MAX> {
     }
 }
 
-pub struct ComponentVecIter<'a, T, const MAX: usize> {
-    current: usize,
-    count: usize,
-    source: &'a ComponentVec<T, MAX>,
+pub fn point_in_frect(rect: &FRect, x: f32, y: f32) -> bool {
+    x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h
 }
 
-impl <'a, T, const MAX: usize> ComponentVecIter<'a, T, MAX> {
-    pub fn new(source: &'a ComponentVec<T, MAX>) -> Self {
-        Self {
-            current: 0,
-            count: source.count,
-            source,
-        }
-    }
+pub fn frect_center(rect: &FRect) -> FPoint {
+    FPoint::new(rect.x + rect.w / 2.0, rect.y + rect.h / 2.0)
 }
-
-impl <'a, T, const MAX: usize> Iterator for ComponentVecIter<'a, T, MAX> {
-    type Item = &'a T;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current != self.count {
-            let item = &self.source[self.current];
-            self.current += 1;
-            Some(item)
-        } else {
-            None
-        }
-    }
-}
-

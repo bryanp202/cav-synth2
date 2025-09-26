@@ -13,6 +13,7 @@ mod animation;
 mod toggleable;
 mod cable;
 mod dragable;
+mod jacks;
 
 use core::f32;
 use std::sync::mpsc::Sender;
@@ -25,11 +26,13 @@ use sdl3::render::{Canvas, FPoint, FRect, Texture, TextureCreator};
 use crate::audio::AudioMessage;
 use crate::common::ComponentVec;
 use crate::gui::animation::Animation;
+use crate::gui::jacks::JackData;
 use crate::gui::toggleable::Toggleables;
-use crate::gui::cable::Cables;
 use crate::gui::dragable::{DragType, Dragables, OnDragBehavior};
 
-const TEXTURE_COUNT: usize = 4;
+const JACK_INPUT_TEXTURE: usize = 4;
+const JACK_OUTPUT_TEXTURE: usize = 5;
+const TEXTURE_COUNT: usize = 6;
 
 pub struct Gui<'a> {
     audio_channel: Sender<AudioMessage>,
@@ -37,9 +40,9 @@ pub struct Gui<'a> {
     mouse_pos: FPoint,
     //text_msg: Option<fn (String) -> GuiMessage>,
 
-    cables: Cables,
     toggleables: Toggleables,
     dragables: Dragables,
+    jacks: JackData,
     // text_boxes: TextBoxes,
 
     // Textures
@@ -53,19 +56,21 @@ impl <'a> Gui <'a> {
             audio_channel,
             mouse_pos: FPoint { x: 0.0, y: 0.0 },
             //text_msg: None,
-            cables: Cables::new(),
             toggleables: Toggleables::init(),
             dragables: Dragables::init(),
+            jacks: JackData::new(),
             textures: ComponentVec::new(),
             texture_creator,
         }
     }
 
     pub fn init(&mut self) {
-        self.load_texture(include_bytes!("../assets/knob_basic.png"));
+        self.load_texture(include_bytes!("../assets/knob_basic128.png"));
         self.load_texture(include_bytes!("../assets/switch_two_state.png"));
         self.load_texture(include_bytes!("../assets/switch_three_state.png"));
         self.load_texture(include_bytes!("../assets/slider_detailed.png"));
+        self.load_texture(include_bytes!("../assets/jack_input.png"));
+        self.load_texture(include_bytes!("../assets/jack_output.png"));
 
 
         for x in 0..10 {
@@ -116,14 +121,38 @@ impl <'a> Gui <'a> {
                 ).unwrap();
             }
         }
+
+        for x in 0..5 {
+            let x = x as f32 * 32.0;
+            for y in 0..3 {
+                let y = y as f32 * 32.0;
+                self.jacks.spawn_input(
+                    FRect::new(800.0 + x, 800.0 + x + y, 32.0, 32.0),
+                    jacks::InputJack::Osc1Freq,
+                ).unwrap();
+
+                self.jacks.spawn_output(
+                    FRect::new(200.0 + x, 800.0 + x + y, 32.0, 32.0),
+                    jacks::OutputJack::Osc1Value,
+                ).unwrap();
+            }
+        }
     }
 
     pub fn render(&mut self, canvas: &mut Canvas<Window>) -> Result<(), sdl3::Error> {
-        canvas.set_draw_color(Color::BLACK);
+        canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
         canvas.clear();
         toggleable::render_system(canvas, &self.textures, &self.toggleables)?;
         dragable::render_system(canvas, &self.textures, &self.dragables)?;
-        cable::render_system(canvas, &self.cables)?;
+        canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
+        jacks::render_system(
+            canvas,
+            &self.textures[JACK_OUTPUT_TEXTURE],
+            &self.textures[JACK_INPUT_TEXTURE],
+            &mut self.jacks,
+            self.mouse_pos
+        )?;
+        canvas.set_blend_mode(sdl3::render::BlendMode::None);
         canvas.present();
         Ok(())
     }
@@ -131,14 +160,16 @@ impl <'a> Gui <'a> {
     pub fn left_mouse_down(&mut self, x: f32, y: f32, clicks: u8) {
         dragable::on_left_down_system(&mut self.audio_channel, &mut self.dragables, x, y, clicks);
         toggleable::on_left_down_system(&mut self.audio_channel, &mut self.toggleables, x, y, clicks);
+        jacks::on_left_down_system(&mut self.jacks, x, y);
     }
 
     pub fn left_mouse_up(&mut self, clicks: u8)  {
         dragable::on_left_release_system(&mut self.dragables);
+        jacks::on_left_release_system(&mut self.jacks, self.mouse_pos);
     }
 
     pub fn right_mouse_down(&mut self, x: f32, y: f32, clicks: u8) {
-        
+        jacks::on_right_down_system(&mut self.jacks, x, y);
     }
 
     pub fn mouse_move(&mut self, x: f32, y: f32, xrel: f32, yrel: f32) {

@@ -2,7 +2,7 @@ use std::sync::mpsc;
 
 use sdl3::{render::{Canvas, FRect, Texture}, video::Window};
 
-use crate::{audio::AudioMessage, common::ComponentVec, gui::animation::Animation};
+use crate::{audio::AudioMessage, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
 
 const MAX_TOGGLEABLE_COUNT: usize = 128;
 
@@ -54,7 +54,7 @@ pub fn render_system(canvas: &mut Canvas<Window>, textures: &[Texture], toggleab
 
 pub fn on_left_down_system(audio_channel: &mut mpsc::Sender<AudioMessage>, toggleables: &mut Toggleables, x: f32, y: f32, clicks: u8) {
     for (i, rect) in toggleables.rect.iter().enumerate() {
-        if x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h {
+        if point_in_frect(&rect, x, y) {
             let on_click = toggleables.on_left_click[i];
             let state = &mut toggleables.state[i];
             *state = (*state + 1) % toggleables.render[i].get_frame_count();

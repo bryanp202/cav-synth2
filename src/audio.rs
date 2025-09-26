@@ -64,8 +64,8 @@ where
         move |output: &mut [T], _: &cpal::OutputCallbackInfo| {
             for i in 0..output.len() / 2 {
                 let (left, right) = audio_state.process();
-                output[i*2] = T::from_sample(left);
-                output[i*2 + 1] = T::from_sample(right);
+                output[i*2] = T::from_sample(left.clamp(-1.0, 1.0));
+                output[i*2 + 1] = T::from_sample(right.clamp(-1.0, 1.0));
             }
             audio_state.update();
         },
@@ -180,7 +180,7 @@ impl AudioState {
             match msg {
                 AudioMessage::Osc1Freq(freq) => {
                     for analog in &mut self.analogs as &mut [AnalogOscillator] {
-                        analog.set_freq_value((freq - 0.5) /10.0);
+                        analog.set_freq_value((freq - 0.5) / 10.0);
                     }
                 },
                 AudioMessage::KeyPress(velocity, note) => self.midi.key_press(&mut self.outputs, note, velocity),
