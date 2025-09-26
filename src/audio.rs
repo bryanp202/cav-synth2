@@ -7,6 +7,7 @@ use component::envelope::Envelope;
 use component::analog::AnalogOscillator;
 use component::cable::Cable;
 use component::filter::Filter;
+use component::delay::Delay;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Host, SizedSample, StreamConfig, SupportedStreamConfig, I24};
 use crate::common::ComponentVec;
@@ -77,6 +78,7 @@ where
 const MAX_OSCILLATORS: usize = 128;
 const MAX_ENVELOPES: usize = 256;
 const MAX_FILTERS: usize = 128;
+const MAX_DELAYS: usize = 1;
 const MAX_CABLES: usize = 4096;
 
 #[derive(Clone, Copy, Debug)]
@@ -97,6 +99,7 @@ struct AudioState {
     analogs: ComponentVec<AnalogOscillator, MAX_OSCILLATORS>,
     envelopes: ComponentVec<Envelope, MAX_ENVELOPES>,
     filters: ComponentVec<Filter, MAX_FILTERS>,
+    delays: ComponentVec<Delay, MAX_DELAYS>,
     cables: ComponentVec<Cable, MAX_CABLES>,
 }
 
@@ -114,6 +117,7 @@ impl AudioState {
             cables: ComponentVec::new(),
             envelopes: ComponentVec::new(),
             filters: ComponentVec::new(),
+            delays: ComponentVec::new(),
         };
 
         new_state.init();
@@ -158,10 +162,12 @@ impl AudioState {
                 Cable::new(self.midi.get_voice_note(i), self.filters[i].get_freq_input(), 1.0)
             ).unwrap();
         }
+        self.delays.push(Delay::new(&mut self.inputs, &mut self.outputs)).unwrap();
         for filter in self.filters.iter() {
-            self.cables.push(Cable::new(filter.get_output(), 0, 0.3)).unwrap();
-            self.cables.push(Cable::new(filter.get_output(), 1, 0.3)).unwrap();
+            self.cables.push(Cable::new(filter.get_output(), self.delays[0].get_value_input(), 1.0)).unwrap();
         }
+        self.cables.push(Cable::new(self.delays[0].get_output(), 0, 0.3)).unwrap();
+        self.cables.push(Cable::new(self.delays[0].get_output(), 1, 0.3)).unwrap();
     }
 }
 
@@ -171,6 +177,7 @@ impl AudioState {
         component::analog::analog_oscillator_system(&mut self.analogs, &self.inputs, &mut self.outputs, self.sample_rate);
         component::envelope::envelope_system(&mut self.envelopes, &self.inputs, &mut self.outputs);
         component::filter::butterworth_system(&mut self.filters, &self.inputs, &mut self.outputs, self.sample_rate);
+        component::delay::delay_system(&mut self.delays, &self.inputs, &mut self.outputs);
         component::cable::cable_system(&self.cables, &mut self.inputs, &self.outputs);
         (self.inputs[0], self.inputs[1])
     }

@@ -10,10 +10,11 @@
 //          // Sent on hover release
 // }
 mod animation;
-mod toggleable;
 mod cable;
 mod dragable;
+mod drawable;
 mod jacks;
+mod toggleable;
 
 use core::f32;
 use std::sync::mpsc::Sender;
@@ -26,6 +27,7 @@ use sdl3::render::{Canvas, FPoint, FRect, Texture, TextureCreator};
 use crate::audio::AudioMessage;
 use crate::common::ComponentVec;
 use crate::gui::animation::Animation;
+use crate::gui::drawable::Drawables;
 use crate::gui::jacks::JackData;
 use crate::gui::toggleable::Toggleables;
 use crate::gui::dragable::{DragType, Dragables, OnDragBehavior};
@@ -43,6 +45,7 @@ pub struct Gui<'a> {
     toggleables: Toggleables,
     dragables: Dragables,
     jacks: JackData,
+    drawables: Drawables,
     // text_boxes: TextBoxes,
 
     // Textures
@@ -59,6 +62,7 @@ impl <'a> Gui <'a> {
             toggleables: Toggleables::init(),
             dragables: Dragables::init(),
             jacks: JackData::new(),
+            drawables: Drawables::new(),
             textures: ComponentVec::new(),
             texture_creator,
         }
@@ -137,6 +141,9 @@ impl <'a> Gui <'a> {
                 ).unwrap();
             }
         }
+
+        self.drawables.spawn(FRect { x: 1300.0, y: 500.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
+        self.drawables.spawn(FRect { x: 1300.0, y: 100.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
     }
 
     pub fn render(&mut self, canvas: &mut Canvas<Window>) -> Result<(), sdl3::Error> {
@@ -144,6 +151,7 @@ impl <'a> Gui <'a> {
         canvas.clear();
         toggleable::render_system(canvas, &self.textures, &self.toggleables)?;
         dragable::render_system(canvas, &self.textures, &self.dragables)?;
+        drawable::render_system(canvas, &self.drawables)?;
         canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
         jacks::render_system(
             canvas,
@@ -160,11 +168,13 @@ impl <'a> Gui <'a> {
     pub fn left_mouse_down(&mut self, x: f32, y: f32, clicks: u8) {
         dragable::on_left_down_system(&mut self.audio_channel, &mut self.dragables, x, y, clicks);
         toggleable::on_left_down_system(&mut self.audio_channel, &mut self.toggleables, x, y, clicks);
+        drawable::on_left_down_system(&mut self.drawables, x, y);
         jacks::on_left_down_system(&mut self.jacks, x, y);
     }
 
     pub fn left_mouse_up(&mut self, clicks: u8)  {
         dragable::on_left_release_system(&mut self.dragables);
+        drawable::on_left_release_system(&mut self.audio_channel, &mut self.drawables);
         jacks::on_left_release_system(&mut self.jacks, self.mouse_pos);
     }
 
@@ -175,6 +185,7 @@ impl <'a> Gui <'a> {
     pub fn mouse_move(&mut self, x: f32, y: f32, xrel: f32, yrel: f32) {
         self.mouse_pos = FPoint::new(x, y);
         dragable::on_mouse_move_system(&mut self.audio_channel, &mut self.dragables, xrel, yrel);
+        drawable::on_mouse_move_system(&mut self.drawables, x, y);
     }
 
     pub fn text_input(&mut self, text: String) {

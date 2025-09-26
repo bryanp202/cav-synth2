@@ -1,6 +1,7 @@
 pub mod envelope;
 pub mod analog;
 pub mod cable;
+pub mod delay;
 pub mod filter;
 
 pub fn calculate_freq(voltage: f32) -> f32 {
