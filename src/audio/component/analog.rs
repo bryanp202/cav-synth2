@@ -107,4 +107,3 @@ pub fn analog_oscillator_system(analogs: &mut [AnalogOscillator], inputs: &[f32]
         outputs[analog.outputs + OUT_VALUE] = scaled_raw;
     }
 }
-

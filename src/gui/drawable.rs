@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, sync::mpsc};
+use std::{cmp::Ordering, sync::{mpsc, Arc}};
 
 use sdl3::{pixels::Color, render::{Canvas, FPoint, FRect}, video::Window};
 
@@ -52,10 +52,10 @@ pub fn on_left_down_system(drawables: &mut Drawables, x: f32, y: f32) {
 }
 
 pub fn on_left_release_system(audio_channel: &mut mpsc::Sender<AudioMessage>, drawables: &mut Drawables) {
-    if let Some((i, _, _, _, _)) = drawables.active_drawable {
+    if let Some((i, _, rect, _, _)) = drawables.active_drawable {
         let on_release = drawables.on_release[i];
         let values = &drawables.values[i];
-        on_release_behavior(audio_channel, on_release, values);
+        on_release_behavior(audio_channel, on_release, values, rect.h);
         drawables.active_drawable = None;
     }
 }
@@ -75,9 +75,17 @@ pub fn render_system(canvas: &mut Canvas<Window>, drawables: &Drawables) -> Resu
 }
 
 
-fn on_release_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, on_release: OnReleaseBehavior, values: &Vec<FRect>) {
+fn on_release_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, on_release: OnReleaseBehavior, values: &Vec<FRect>, height: f32) {
     match on_release {
-        OnReleaseBehavior::Osc2WavetableTimeDomain => {},
+        OnReleaseBehavior::Osc2WavetableTimeDomain => {
+            let new_wavetable: Arc<[f32; 2048]> = Arc::new(std::array::from_fn(|i| {
+                let index1 = i / 8;
+                let index2 = ((i + 1) / 8) % 256;
+                let ratio = (i % 8) as f32 / 8.0;
+                2.0 * (values[index1].h + (values[index2].h - values[index1].h) * ratio) / height
+            }));
+            audio_channel.send(AudioMessage::WavetableUpdate(new_wavetable)).unwrap();
+        },
     }
 }
 

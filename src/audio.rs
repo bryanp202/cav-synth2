@@ -1,7 +1,7 @@
 mod component;
 mod midi;
 
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 
 use component::envelope::Envelope;
 use component::analog::AnalogOscillator;
@@ -10,6 +10,7 @@ use component::filter::Filter;
 use component::delay::Delay;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Host, SizedSample, StreamConfig, SupportedStreamConfig, I24};
+use crate::audio::component::wavetable::{self, WavetableOscillator};
 use crate::common::ComponentVec;
 
 use crate::audio::midi::Midi;
@@ -81,8 +82,9 @@ const MAX_FILTERS: usize = 128;
 const MAX_DELAYS: usize = 1;
 const MAX_CABLES: usize = 4096;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub enum AudioMessage {
+    WavetableUpdate(Arc<wavetable::Wavetable>),
     Osc1Freq(f32),
     KeyPress(u8, u8),
     KeyRelease(u8),
@@ -97,6 +99,7 @@ struct AudioState {
     outputs: Vec<f32>,
     midi: Midi,
     analogs: ComponentVec<AnalogOscillator, MAX_OSCILLATORS>,
+    wavetables: ComponentVec<WavetableOscillator, MAX_OSCILLATORS>,
     envelopes: ComponentVec<Envelope, MAX_ENVELOPES>,
     filters: ComponentVec<Filter, MAX_FILTERS>,
     delays: ComponentVec<Delay, MAX_DELAYS>,
@@ -114,6 +117,7 @@ impl AudioState {
             outputs,
             midi,
             analogs: ComponentVec::new(),
+            wavetables: ComponentVec::new(),
             cables: ComponentVec::new(),
             envelopes: ComponentVec::new(),
             filters: ComponentVec::new(),
@@ -134,13 +138,21 @@ impl AudioState {
                 Cable::new(self.midi.get_voice_velocity(i), self.envelopes[i].get_velocity_input(), 1.0)
             ).unwrap();
         }
+        let default_wavetable = Arc::new([0.0; 2048]);
         for i in 0..self.midi.voices() {
             self.analogs.push(AnalogOscillator::new(&mut self.inputs, &mut self.outputs)).unwrap();
+            self.wavetables.push(WavetableOscillator::new(&mut self.inputs, &mut self.outputs, default_wavetable.clone())).unwrap();
             self.cables.push(
                 Cable::new(self.midi.get_voice_note(i), self.analogs[i].get_freq_input(), 1.0)
             ).unwrap();
             self.cables.push(
                 Cable::new(self.envelopes[i].get_output(), self.analogs[i].get_level_input(), 1.0)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.midi.get_voice_note(i), self.wavetables[i].get_freq_input(), 1.0)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.envelopes[i].get_output(), self.wavetables[i].get_level_input(), 1.0)
             ).unwrap();
         }
         for i in 0..self.midi.voices() {
@@ -153,7 +165,10 @@ impl AudioState {
             ).unwrap();
             self.filters.push(Filter::new(&mut self.inputs, &mut self.outputs)).unwrap();
             self.cables.push(
-                Cable::new(self.analogs[i].get_output(), self.filters[i].get_value_input(), 1.0)
+                Cable::new(self.analogs[i].get_output(), self.filters[i].get_value_input(), 0.7)
+            ).unwrap();
+            self.cables.push(
+                Cable::new(self.wavetables[i].get_output(), self.filters[i].get_value_input(), 0.7)
             ).unwrap();
             self.cables.push(
                 Cable::new(self.envelopes[i + self.midi.voices()].get_output(), self.filters[i].get_freq_input(), 0.7)
@@ -175,6 +190,7 @@ impl AudioState {
     fn process(&mut self) -> (f32, f32) {
         self.midi.process(&mut self.outputs);
         component::analog::analog_oscillator_system(&mut self.analogs, &self.inputs, &mut self.outputs, self.sample_rate);
+        component::wavetable::wavetable_oscillator_system(&mut self.wavetables, &self.inputs, &mut self.outputs, self.sample_rate as f32);
         component::envelope::envelope_system(&mut self.envelopes, &self.inputs, &mut self.outputs);
         component::filter::butterworth_system(&mut self.filters, &self.inputs, &mut self.outputs, self.sample_rate);
         component::delay::delay_system(&mut self.delays, &self.inputs, &mut self.outputs);
@@ -194,6 +210,11 @@ impl AudioState {
                 AudioMessage::KeyRelease(note) => self.midi.key_release(&mut self.outputs, note),
                 AudioMessage::PedalPress => self.midi.pedal_press(),
                 AudioMessage::PedalRelease => self.midi.pedal_release(&mut self.outputs),
+                AudioMessage::WavetableUpdate(new_wavetable) => {
+                    for wavetable in self.wavetables.iter_mut() {
+                        wavetable.update_wavetable(new_wavetable.clone());
+                    }
+                }
             }
         }
     }
