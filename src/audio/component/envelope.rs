@@ -33,7 +33,7 @@ impl Envelope {
         Self {
             inputs: env_inputs,
             outputs: env_outputs,
-            attack: 0.01,
+            attack: 0.015,
             decay: 1.6,
             release: 0.5,
             sustain: 0.0,

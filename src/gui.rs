@@ -34,7 +34,7 @@ use crate::gui::dragable::{DragType, Dragables, OnDragBehavior};
 
 const JACK_INPUT_TEXTURE: usize = 4;
 const JACK_OUTPUT_TEXTURE: usize = 5;
-const TEXTURE_COUNT: usize = 6;
+const TEXTURE_COUNT: usize = 7;
 
 pub struct Gui<'a> {
     audio_channel: Sender<AudioMessage>,
@@ -75,6 +75,7 @@ impl <'a> Gui <'a> {
         self.load_texture(include_bytes!("../assets/slider_detailed.png"));
         self.load_texture(include_bytes!("../assets/jack_input.png"));
         self.load_texture(include_bytes!("../assets/jack_output.png"));
+        self.load_texture(include_bytes!("../assets/knob_basic4.png"));
 
 
         for x in 0..10 {
@@ -85,7 +86,7 @@ impl <'a> Gui <'a> {
                     FRect::new(x * 64.0, y * 64.0, 64.0, 64.0), 
                     0.5, 
                     (DragType::HORIZONTAL, OnDragBehavior::Osc1Freq),
-                    dragable::OnDoubleClickBehavior::SetTo(0.2),
+                    dragable::OnDoubleClickBehavior::SetTo(0.5),
                     Animation::new(0, 128, 64.0, 64.0)
                 ).unwrap();
                 let switch_w = self.textures[1].width() as f32;
@@ -118,9 +119,9 @@ impl <'a> Gui <'a> {
                 let slider_h = self.textures[3].height() as f32 / 128.0;
                 self.dragables.spawn(
                     FRect::new(1000.0 + x * slider_w, (y-5.0) * slider_h, slider_w, slider_h), 
-                    0.0,
-                    (DragType::VERTICAL, OnDragBehavior::Osc1Freq),
-                    dragable::OnDoubleClickBehavior::SetTo(0.0),
+                    0.5,
+                    (DragType::VERTICAL, OnDragBehavior::DelayTime),
+                    dragable::OnDoubleClickBehavior::SetTo(0.5),
                     Animation::new(3, 128, slider_w, slider_h)
                 ).unwrap();
             }
@@ -142,6 +143,13 @@ impl <'a> Gui <'a> {
             }
         }
 
+        self.dragables.spawn(
+            FRect { x: 1200.0, y: 700.0, w: 64.0, h: 64.0 },
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Osc1Shape),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            Animation::new(self.textures.len() - 1, 4, 64.0, 64.0)
+        ).unwrap();
         self.drawables.spawn(FRect { x: 1300.0, y: 500.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
         self.drawables.spawn(FRect { x: 1300.0, y: 100.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
     }

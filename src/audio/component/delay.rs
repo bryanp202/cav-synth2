@@ -31,6 +31,11 @@ impl Delay {
         }
     }
 
+    pub fn set_delay_time(&mut self, delay_index: usize) {
+        self.delay_index = delay_index;
+        self.buffer.shrink_to(delay_index);
+    }
+
     pub fn get_output(&self) -> usize {
         self.outputs + VALUE_OUTPUT
     }

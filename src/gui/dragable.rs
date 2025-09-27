@@ -2,7 +2,7 @@ use std::sync::mpsc;
 
 use sdl3::{render::{Canvas, FRect, Texture}, video::Window};
 
-use crate::{audio::AudioMessage, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
+use crate::{audio::{AudioMessage, WaveShape}, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
 
 const MAX_DRAGABLE_COUNT: usize = 228;
 
@@ -17,6 +17,8 @@ pub enum DragType {
 #[derive(Clone, Copy)]
 pub enum OnDragBehavior {
     Osc1Freq,
+    Osc1Shape,
+    DelayTime,
 }
 
 #[derive(Clone, Copy)]
@@ -113,6 +115,16 @@ fn on_drag_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, value: &mut 
         let send_value = new_frame / animation_frames as f32;
         match on_drag {
             OnDragBehavior::Osc1Freq => audio_channel.send(AudioMessage::Osc1Freq(send_value)).unwrap(),
+            OnDragBehavior::Osc1Shape => {
+                let shape = match (send_value * 4.0) as usize {
+                    0 => WaveShape::Sine,
+                    1 => WaveShape::Triangle,
+                    2 => WaveShape::Square,
+                    _ => WaveShape::Saw,
+                };
+                audio_channel.send(AudioMessage::Osc1Shape(shape)).unwrap();
+            }
+            OnDragBehavior::DelayTime => audio_channel.send(AudioMessage::DelayTime(send_value)).unwrap(),
         }
     }
 }

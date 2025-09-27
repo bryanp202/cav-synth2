@@ -12,7 +12,7 @@ fn main() {
     let sdl3_context = sdl3::init().expect("Failed to initialize sdl3");
     let video_subsystem = sdl3_context.video().expect("Failed to initialize video subsystem");
     
-    let window = video_subsystem.window("Hello", 1920, 1080)
+    let window = video_subsystem.window("Cav-Synth2", 1920, 1080)
         .borderless()
         .build()
         .expect("Failed to make window");

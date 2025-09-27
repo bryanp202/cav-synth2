@@ -10,10 +10,12 @@ use component::filter::Filter;
 use component::delay::Delay;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Host, SizedSample, StreamConfig, SupportedStreamConfig, I24};
+use crate::audio::component::analog;
 use crate::audio::component::wavetable::{self, WavetableOscillator};
 use crate::common::ComponentVec;
 
 use crate::audio::midi::Midi;
+pub use analog::WaveShape;
 
 pub fn init(receiver: mpsc::Receiver<AudioMessage>) -> Result<cpal::Stream, String> {
     let stream = stream_setup(receiver)?;
@@ -86,6 +88,8 @@ const MAX_CABLES: usize = 4096;
 pub enum AudioMessage {
     WavetableUpdate(Arc<wavetable::Wavetable>),
     Osc1Freq(f32),
+    Osc1Shape(analog::WaveShape),
+    DelayTime(f32),
     KeyPress(u8, u8),
     KeyRelease(u8),
     PedalPress,
@@ -202,8 +206,18 @@ impl AudioState {
         for msg in self.receiver.try_iter() {
             match msg {
                 AudioMessage::Osc1Freq(freq) => {
-                    for analog in &mut self.analogs as &mut [AnalogOscillator] {
+                    for analog in self.analogs.iter_mut() {
                         analog.set_freq_value((freq - 0.5) / 10.0);
+                    }
+                },
+                AudioMessage::Osc1Shape(shape) => {
+                    for analog in self.analogs.iter_mut() {
+                        analog.set_shape(shape);
+                    }
+                },
+                AudioMessage::DelayTime(time) => {
+                    for delay in self.delays.iter_mut() {
+                        delay.set_delay_time((time as f64 * self.sample_rate) as usize);
                     }
                 },
                 AudioMessage::KeyPress(velocity, note) => self.midi.key_press(&mut self.outputs, note, velocity),
