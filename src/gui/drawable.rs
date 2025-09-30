@@ -1,8 +1,9 @@
 use std::{cmp::Ordering, sync::{mpsc, Arc}};
 
+use realfft::{num_complex::Complex, num_traits::Zero, ComplexToReal, RealFftPlanner, RealToComplex};
 use sdl3::{pixels::Color, render::{Canvas, FPoint, FRect}, video::Window};
 
-use crate::{audio::AudioMessage, common::{point_in_frect, ComponentVec}};
+use crate::{audio::{AudioMessage, Wavetable, WAVETABLE_FRAME_LENGTH}, common::{point_in_frect, ComponentVec}};
 
 const MAX_DRAWABLE_COUNT: usize = 2;
 
@@ -16,15 +17,19 @@ pub struct Drawables {
     rect: ComponentVec<FRect, MAX_DRAWABLE_COUNT>,
     on_release: ComponentVec<OnReleaseBehavior, MAX_DRAWABLE_COUNT>,
     values: ComponentVec<Vec<FRect>, MAX_DRAWABLE_COUNT>,
+    r2cfft: Arc<dyn RealToComplex<f32>>,
+    c2rfft: Arc<dyn ComplexToReal<f32>>,
 }
 
 impl Drawables {
-    pub fn new() -> Self {
+    pub fn new(fft_planner: &mut RealFftPlanner<f32>) -> Self {
         Self {
             active_drawable: None,
             rect: ComponentVec::new(),
             on_release: ComponentVec::new(),
             values: ComponentVec::new(),
+            r2cfft: fft_planner.plan_fft_forward(WAVETABLE_FRAME_LENGTH),
+            c2rfft: fft_planner.plan_fft_inverse(WAVETABLE_FRAME_LENGTH),
         }
     }
 
@@ -55,7 +60,7 @@ pub fn on_left_release_system(audio_channel: &mut mpsc::Sender<AudioMessage>, dr
     if let Some((i, _, rect, _, _)) = drawables.active_drawable {
         let on_release = drawables.on_release[i];
         let values = &drawables.values[i];
-        on_release_behavior(audio_channel, on_release, values, rect.h);
+        on_release_behavior(&drawables.r2cfft, &drawables.c2rfft, audio_channel, on_release, values, rect.h);
         drawables.active_drawable = None;
     }
 }
@@ -75,16 +80,49 @@ pub fn render_system(canvas: &mut Canvas<Window>, drawables: &Drawables) -> Resu
 }
 
 
-fn on_release_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, on_release: OnReleaseBehavior, values: &Vec<FRect>, height: f32) {
+fn on_release_behavior(
+    r2c: &Arc<dyn RealToComplex<f32>>,
+    c2r: &Arc<dyn ComplexToReal<f32>>,
+    audio_channel: &mut mpsc::Sender<AudioMessage>,
+    on_release: OnReleaseBehavior,
+    values: &Vec<FRect>,
+    height: f32
+) {
     match on_release {
         OnReleaseBehavior::Osc2WavetableTimeDomain => {
-            let new_wavetable: Arc<[f32; 2048]> = Arc::new(std::array::from_fn(|i| {
+            const PARTIAL_COUNT: usize = WAVETABLE_FRAME_LENGTH / 2 + 1;
+
+            let mut default_variation: [f32; WAVETABLE_FRAME_LENGTH] = std::array::from_fn(|i| {
                 let index1 = i / 8;
                 let index2 = ((i + 1) / 8) % 256;
                 let ratio = (i % 8) as f32 / 8.0;
                 2.0 * (values[index1].h + (values[index2].h - values[index1].h) * ratio) / height
-            }));
-            audio_channel.send(AudioMessage::WavetableUpdate(new_wavetable)).unwrap();
+            });
+
+            let mut new_wavetable: Wavetable = [0.0; WAVETABLE_FRAME_LENGTH * 8];
+            new_wavetable[0..WAVETABLE_FRAME_LENGTH].copy_from_slice(&default_variation);
+
+            let mut freq_domain = [Complex::zero(); PARTIAL_COUNT];
+            r2c.process(&mut default_variation, &mut freq_domain).unwrap();
+
+            freq_domain[PARTIAL_COUNT / 2..].fill(Complex::zero());
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH..WAVETABLE_FRAME_LENGTH*2]).unwrap();
+            freq_domain[PARTIAL_COUNT / 4 .. PARTIAL_COUNT / 2].fill(Complex::zero());
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH*2..WAVETABLE_FRAME_LENGTH*3]).unwrap();
+            freq_domain[PARTIAL_COUNT / 8 .. PARTIAL_COUNT / 4].fill(Complex::zero());
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH*3..WAVETABLE_FRAME_LENGTH*4]).unwrap();
+            freq_domain[PARTIAL_COUNT / 16 .. PARTIAL_COUNT / 8].fill(Complex::zero());
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH*4..WAVETABLE_FRAME_LENGTH*5]).unwrap();
+            freq_domain[PARTIAL_COUNT / 32 .. PARTIAL_COUNT / 16].fill(Complex::zero());
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH*5..WAVETABLE_FRAME_LENGTH*6]).unwrap();
+            freq_domain[PARTIAL_COUNT / 64 .. PARTIAL_COUNT / 32].fill(Complex::zero());
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH*6..WAVETABLE_FRAME_LENGTH*7]).unwrap();
+            freq_domain[PARTIAL_COUNT / 128 .. PARTIAL_COUNT / 64].fill(Complex::zero());
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH*7..]).unwrap();
+
+            new_wavetable[WAVETABLE_FRAME_LENGTH..].iter_mut().for_each(|x| *x /= WAVETABLE_FRAME_LENGTH as f32);
+            
+            audio_channel.send(AudioMessage::Osc2WavetableUpdate(Arc::new(new_wavetable))).unwrap();
         },
     }
 }

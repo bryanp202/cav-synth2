@@ -1,42 +1,35 @@
 use std::sync::Arc;
 
-const LEVEL: usize = 0;
-const FREQUENCY: usize = 1;
-const PHASE: usize = 2;
-const TABLE_INPUT: usize = 3;
-const INPUT_COUNT: usize = 4;
+use crate::audio::MAX_POLY_COUNT;
 
-const OUT_VALUE: usize = 0;
-const OUTPUT_COUNT: usize = 1;
+pub const LEVEL_INPUT: usize = 0 * MAX_POLY_COUNT;
+pub const FREQUENCY_INPUT: usize = 1 * MAX_POLY_COUNT;
+pub const PHASE_INPUT: usize = 2 * MAX_POLY_COUNT;
+pub const TOTAL_INPUT_COUNT: usize = 3 * MAX_POLY_COUNT;
 
-pub type Wavetable = [f32; 2048 * 1];
+pub const OUT_VALUE: usize = 0 * MAX_POLY_COUNT;
+pub const TOTAL_OUTPUT_COUNT: usize = 1 * MAX_POLY_COUNT;
 
-pub struct WavetableOscillator {
+pub const WAVETABLE_FRAME_LENGTH: usize = 2048;
+pub const WAVETABLE_VARIATION_COUNT: usize = 8;
+pub type Wavetable = [f32; WAVETABLE_FRAME_LENGTH * WAVETABLE_VARIATION_COUNT];
+
+pub struct PolyWavetable<const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> {
     wavetable: Arc<Wavetable>,
     level: f32,
     frequency: f32,
     phase: f32,
-    table_pos: f32,
-    current_phase: f32,
-    inputs: usize,
-    outputs: usize,
+    current_phases: [f32; MAX_POLY_COUNT],
 }
 
-impl WavetableOscillator {
-    pub fn new(inputs: &mut Vec<f32>, outputs: &mut Vec<f32>, wavetable: Arc<Wavetable>) -> Self {
-        let wavetable_inputs = inputs.len();
-        let wavetable_outputs = outputs.len();
-        inputs.resize(inputs.len() + INPUT_COUNT, 0.0);
-        outputs.resize(outputs.len() + OUTPUT_COUNT, 0.0);
+impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPUT_OFFSET, OUTPUT_OFFSET> {
+    pub fn new() -> Self {
         Self {
-            inputs: wavetable_inputs,
-            outputs: wavetable_outputs,
+            wavetable: Arc::new([0.0; WAVETABLE_FRAME_LENGTH * WAVETABLE_VARIATION_COUNT]),
             level: 0.0,
             frequency: 0.0,
             phase: 0.0,
-            table_pos: 0.0,
-            current_phase: 0.0,
-            wavetable: wavetable.clone(),
+            current_phases: [0.0; MAX_POLY_COUNT],
         }
     }
 
@@ -48,52 +41,34 @@ impl WavetableOscillator {
         self.frequency = freq;
     }
 
-    pub fn get_output(&self) -> usize {
-        self.outputs
-    }
+    pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32], sample_rate: f32) {
+        for (wavetable, current_phase) in self.current_phases.iter_mut().enumerate() {
+            let phase_input = inputs[INPUT_OFFSET + PHASE_INPUT + wavetable];
+            let frequency_input = inputs[INPUT_OFFSET + FREQUENCY_INPUT + wavetable];
+            let level_input = inputs[INPUT_OFFSET + LEVEL_INPUT + wavetable];
 
-    pub fn get_freq_input(&self) -> usize {
-        self.inputs + FREQUENCY
-    }
+            let level = self.level + level_input;
+            let voltage = self.frequency + frequency_input;
+            let frequency =  super::calculate_freq(voltage);// C-1 (midi note 0)
+            let phase = (*current_phase + phase_input) % WAVETABLE_FRAME_LENGTH as f32;
 
-    // pub fn get_phase_input(&self) -> usize {
-    //     self.inputs + PHASE
-    // }
+            let phase_increment = frequency / sample_rate * WAVETABLE_FRAME_LENGTH as f32;
+            let raw = linear_interp(&self.wavetable, phase, voltage);
 
-    pub fn get_level_input(&self) -> usize {
-        self.inputs + LEVEL
-    }
+            *current_phase = (*current_phase + phase_increment) % WAVETABLE_FRAME_LENGTH as f32;
 
-    fn linear_interp(wavetable: &Wavetable, current_phase: f32, table_pos: f32) -> f32 {
-        let frame = table_pos as usize;
-        let index1 = current_phase as usize;
-        let index2 = (index1 + 1) % 2048;
-        let index_ratio = current_phase.fract();
-
-        wavetable[index1] + (wavetable[index2] - wavetable[index1]) * index_ratio
+            let scaled_raw = raw as f32 * level;
+            outputs[OUTPUT_OFFSET + OUT_VALUE + wavetable] = scaled_raw;
+        }
     }
 }
 
-pub fn wavetable_oscillator_system(wavetables: &mut [WavetableOscillator], inputs: &[f32], outputs: &mut [f32], sample_rate: f32) {
-    for wavetable in wavetables {
-        let phase_input = inputs[wavetable.inputs + PHASE];
-        let frequency_input = inputs[wavetable.inputs + FREQUENCY];
-        let level_input = inputs[wavetable.inputs + LEVEL];
-        let table_input = inputs[wavetable.inputs + TABLE_INPUT];
+fn linear_interp(wavetable: &Wavetable, current_phase: f32, frequency_voltage: f32) -> f32 {
+    let variation = ((frequency_voltage - 0.1) * WAVETABLE_VARIATION_COUNT as f32 / 0.6).clamp(0.0, WAVETABLE_VARIATION_COUNT as f32 - 0.1) as usize;
+    let variation_offset = variation * WAVETABLE_FRAME_LENGTH;
+    let index1 = variation_offset + current_phase as usize;
+    let index2 = variation_offset + (index1 + 1) % WAVETABLE_FRAME_LENGTH;
+    let index_ratio = current_phase.fract();
 
-        let level = wavetable.level + level_input;
-        let voltage = wavetable.frequency + frequency_input;
-        let frequency =  super::calculate_freq(voltage);// C-1 (midi note 0)
-        let phase = (wavetable.current_phase + phase_input) % 2048.0;
-        let table_pos = wavetable.table_pos + table_input;
-
-        let phase_increment = frequency / sample_rate * 2048.0;
-
-        let raw = WavetableOscillator::linear_interp(&wavetable.wavetable, phase, table_pos);
-
-        wavetable.current_phase = (wavetable.current_phase + phase_increment) % 2048.0;
-
-        let scaled_raw = raw as f32 * level;
-        outputs[wavetable.outputs + OUT_VALUE] = scaled_raw;
-    }
+    wavetable[index1] + (wavetable[index2] - wavetable[index1]) * index_ratio
 }

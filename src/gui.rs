@@ -18,6 +18,7 @@ mod toggleable;
 
 use core::f32;
 use std::sync::mpsc::Sender;
+use realfft::RealFftPlanner;
 use sdl3::pixels::{Color, PixelFormat};
 use sdl3::sys::pixels::SDL_PIXELFORMAT_ABGR8888;
 use sdl3::video::WindowContext;
@@ -51,10 +52,13 @@ pub struct Gui<'a> {
     // Textures
     textures: ComponentVec<Texture<'a>, TEXTURE_COUNT>,
     texture_creator: &'a TextureCreator<WindowContext>,
+    // FFT
+    fft_planner: RealFftPlanner<f32>,
 }
 
 impl <'a> Gui <'a> {
     pub fn new(audio_channel: Sender<AudioMessage>, texture_creator: &'a TextureCreator<WindowContext>) -> Self {
+        let mut fft_planner = RealFftPlanner::new();
         Self {
             audio_channel,
             mouse_pos: FPoint { x: 0.0, y: 0.0 },
@@ -62,9 +66,10 @@ impl <'a> Gui <'a> {
             toggleables: Toggleables::init(),
             dragables: Dragables::init(),
             jacks: JackData::new(),
-            drawables: Drawables::new(),
+            drawables: Drawables::new(&mut fft_planner),
             textures: ComponentVec::new(),
             texture_creator,
+            fft_planner
         }
     }
 

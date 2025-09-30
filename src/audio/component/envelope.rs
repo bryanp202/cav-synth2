@@ -1,103 +1,94 @@
 use std::time::Instant;
 
-const GATE: usize = 0;
-const VELOCITY: usize = 1;
-// const ATTACK: usize = 2;
-// const DECAY: usize = 3;
-// const RELEASE: usize = 4;
-// const SUSTAIN: usize = 5;
-const INPUT_COUNT: usize = 2;
+use crate::audio::MAX_POLY_COUNT;
 
-const OUT_VALUE: usize = 0;
-const OUTPUT_COUNT: usize = 1;
+pub const GATE_INPUT: usize = 0 * MAX_POLY_COUNT;
+pub const VELOCITY_INPUT: usize = 1 * MAX_POLY_COUNT;
+pub const ATTACK_INPUT: usize = 2 * MAX_POLY_COUNT;
+pub const DECAY_INPUT: usize = 3 * MAX_POLY_COUNT;
+pub const RELEASE_INPUT: usize = 4 * MAX_POLY_COUNT;
+pub const SUSTAIN_INPUT: usize = 5 * MAX_POLY_COUNT;
+pub const TOTAL_INPUT_COUNT: usize = 6 * MAX_POLY_COUNT;
 
-#[derive(Default)]
-pub struct Envelope {
+pub const OUT_VALUE: usize = 0 * MAX_POLY_COUNT;
+pub const TOTAL_OUTPUT_COUNT: usize = 1 * MAX_POLY_COUNT;
+
+#[derive(Clone, Copy, Default)]
+struct EnvelopeMetaData {
     start: Option<Instant>,
     released: Option<Instant>,
     release_start_value: f32,
+}
+
+pub struct PolyEnvelope<const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> {
+    envelopes: [EnvelopeMetaData; MAX_POLY_COUNT],
     attack: f32,
     decay: f32,
     release: f32,
     sustain: f32,
-    inputs: usize,
-    outputs: usize,
 }
 
-impl Envelope {
-    pub fn new(inputs: &mut Vec<f32>, outputs: &mut Vec<f32>) -> Self {
-        let env_inputs = inputs.len();
-        let env_outputs = outputs.len();
-        inputs.resize(inputs.len() + INPUT_COUNT, 0.0);
-        outputs.resize(outputs.len() + OUTPUT_COUNT, 0.0);
+impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT_OFFSET, OUTPUT_OFFSET> {
+    pub fn new() -> Self {
         Self {
-            inputs: env_inputs,
-            outputs: env_outputs,
+            envelopes: [EnvelopeMetaData::default(); MAX_POLY_COUNT],
             attack: 0.015,
-            decay: 1.6,
+            decay: 2.6,
             release: 0.5,
-            sustain: 0.0,
-            ..Default::default()
+            sustain: 1.0,
         }
     }
 
-    pub fn get_output(&self) -> usize {
-        self.outputs
-    }
+    pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32]) {
+        for (envelope, meta) in self.envelopes.iter_mut().enumerate() {
+            let velocity = inputs[INPUT_OFFSET + VELOCITY_INPUT + envelope];
+            let gate = inputs[INPUT_OFFSET + GATE_INPUT + envelope];
+            let attack = self.attack + inputs[INPUT_OFFSET + ATTACK_INPUT + envelope];
+            let decay = self.decay + inputs[INPUT_OFFSET + DECAY_INPUT + envelope];
+            let sustain = self.sustain + inputs[INPUT_OFFSET + SUSTAIN_INPUT + envelope];
+            let release = self.release + inputs[INPUT_OFFSET + RELEASE_INPUT + envelope];
 
-    pub fn get_gate_input(&self) -> usize {
-        self.inputs + GATE
-    }
-
-    pub fn get_velocity_input(&self) -> usize {
-        self.inputs + VELOCITY
-    }
-}
-
-pub fn envelope_system(envelopes: &mut [Envelope], inputs: &[f32], outputs: &mut [f32]) {
-    for envelope in envelopes {
-        let velocity = inputs[envelope.inputs + VELOCITY];
-        let gate = inputs[envelope.inputs + GATE];
-        if gate != 0.0 {
-            if let None = envelope.start {
-                envelope.start = Some(Instant::now());
-                envelope.released = None;
-            }
-        } else {
-            if let None = envelope.released {
-                if let Some(_) = envelope.start {
-                    envelope.start = None;
-                    envelope.released = Some(Instant::now());
-                    envelope.release_start_value = outputs[envelope.outputs] / velocity;
+            if gate != 0.0 {
+                if let None = meta.start {
+                    meta.start = Some(Instant::now());
+                    meta.released = None;
+                }
+            } else {
+                if let None = meta.released {
+                    if let Some(_) = meta.start {
+                        meta.start = None;
+                        meta.released = Some(Instant::now());
+                        meta.release_start_value = outputs[OUTPUT_OFFSET + OUT_VALUE + envelope] / velocity;
+                    }
                 }
             }
-        }
-        let out = if let Some(start_time) = envelope.start {
-            let elapsed = start_time.elapsed().as_secs_f32();
-            if elapsed < envelope.attack {
-                1.0 * elapsed / envelope.attack
-            } else if elapsed - envelope.attack < envelope.decay {
-                let since_decay = elapsed - envelope.attack;
-                let peak_sustain_delta = 1.0 - envelope.sustain;
+            let out = if let Some(start_time) = meta.start {
+                let elapsed = start_time.elapsed().as_secs_f32();
+                if elapsed < attack {
+                    1.0 * elapsed / attack
+                } else if elapsed - attack < decay {
+                    let since_decay = elapsed - attack;
+                    let peak_sustain_delta = 1.0 - sustain;
 
-                1.0 - peak_sustain_delta * since_decay / envelope.decay
+                    1.0 - peak_sustain_delta * since_decay / decay
+                } else {
+                    sustain
+                }
+            } else if let Some(released_time) = meta.released {
+                let elapsed = released_time.elapsed().as_secs_f32();
+                let elapsed_ratio = elapsed / release;
+        
+                if elapsed_ratio < 1.0 {
+                    meta.release_start_value * (1.0 - (elapsed_ratio).powf(0.4))
+                } else {
+                    meta.released = None;
+                    0.0
+                }
             } else {
-                envelope.sustain
-            }
-        } else if let Some(released_time) = envelope.released {
-            let elapsed = released_time.elapsed().as_secs_f32();
-            let elapsed_ratio = elapsed / envelope.release;
-    
-            if elapsed_ratio < 1.0 {
-                envelope.release_start_value * (1.0 - (elapsed_ratio).powf(0.4))
-            } else {
-                envelope.released = None;
                 0.0
-            }
-        } else {
-            0.0
-        };
+            };
 
-        outputs[envelope.outputs + OUT_VALUE] = out * velocity;
+            outputs[OUTPUT_OFFSET + OUT_VALUE + envelope] = out * velocity;
+        }
     }
 }
