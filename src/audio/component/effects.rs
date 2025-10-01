@@ -65,7 +65,7 @@ struct Delay {
 impl Delay {
     fn new() -> Self {
         Self {
-            wet: 0.5,
+            wet: 0.0,
             delay_index: 24000,
             buffer: VecDeque::new(),
         }
