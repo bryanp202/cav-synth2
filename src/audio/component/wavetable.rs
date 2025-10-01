@@ -64,7 +64,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPU
 }
 
 fn linear_interp(wavetable: &Wavetable, current_phase: f32, frequency_voltage: f32) -> f32 {
-    let variation = ((frequency_voltage * 128.0 - 18.0) / 12.0).clamp(0.0, WAVETABLE_VARIATION_COUNT as f32 - 0.1) as usize;
+    let variation = ((frequency_voltage * 128.0 - 30.0) / 10.0).clamp(0.0, WAVETABLE_VARIATION_COUNT as f32 - 0.1) as usize;
     // FIX THIS TO BE BETTER ////// MAYBE IT NEEDS TO FADE?
     let variation_offset = variation * WAVETABLE_FRAME_LENGTH;
     let index1 = variation_offset + current_phase as usize;

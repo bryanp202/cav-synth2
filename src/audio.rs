@@ -168,9 +168,8 @@ impl AudioState {
         self.cables.add_cable(ENV3_OUTPUT_OFFSET + envelope::OUT_VALUE, FILTER2_INPUT_OFFSET + analog::FREQUENCY_INPUT).unwrap();
         self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::GATE_OUTPUT, ENV3_INPUT_OFFSET + envelope::GATE_INPUT).unwrap();
         self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::VELOCITY_OUTPUT, ENV3_INPUT_OFFSET + envelope::VELOCITY_INPUT).unwrap();
-        //self.cables.add_cable(OSC1_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER1_INPUT_OFFSET).unwrap();
-        //self.cables.add_cable(OSC2_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER1_INPUT_OFFSET).unwrap();
-        self.cables.add_cable(OSC2_OUTPUT_OFFSET + analog::OUT_VALUE, EFFECTS_CHAIN_INPUT_OFFSET).unwrap();
+        self.cables.add_cable(OSC1_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER1_INPUT_OFFSET).unwrap();
+        self.cables.add_cable(OSC2_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER1_INPUT_OFFSET).unwrap();
         self.cables.add_cable(FILTER1_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER2_INPUT_OFFSET).unwrap();
         self.cables.add_cable(FILTER2_OUTPUT_OFFSET + analog::OUT_VALUE, EFFECTS_CHAIN_INPUT_OFFSET).unwrap();
     }
