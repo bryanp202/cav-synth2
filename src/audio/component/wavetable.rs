@@ -39,7 +39,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPU
     }
 
     pub fn set_freq_value(&mut self, freq: f32) {
-        self.frequency = freq;
+        self.frequency = (freq - 0.5) / 10.0;
     }
 
     pub fn set_phase_value(&mut self, phase: f32) {

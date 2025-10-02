@@ -38,7 +38,7 @@ impl JackData {
             clicked_input: None,
             clicked_output: None,
             right_clicked_cable: None,
-            cable_slider_animation: Animation::new(super::CABLE_SLIDER_TEXTURE, 201, 64.0, 32.0),
+            cable_slider_animation: super::SLIDER_CABLE_ANIMATION,
             cable_combos: HashSet::new(),
         }
     }

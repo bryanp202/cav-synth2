@@ -9,8 +9,20 @@ pub struct Animation {
 }
 
 impl Animation {
+    pub const fn new_comptime(texture_index: usize, frames: usize, frame_w: f32, frame_h: f32) -> Animation {
+        Self { texture_index, frames, frame_w, frame_h }
+    }
+
     pub fn new(texture_index: usize, frames: usize, frame_w: f32, frame_h: f32) -> Animation {
         Self { texture_index, frames, frame_w, frame_h }
+    }
+
+    pub fn width(&self) -> f32 {
+        self.frame_w
+    }
+    
+    pub fn height(&self) -> f32 {
+        self.frame_h
     }
 
     pub fn get_frame_count(&self) -> usize {

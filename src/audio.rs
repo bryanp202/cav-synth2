@@ -72,8 +72,8 @@ pub enum OutputJack {
     Env1Value = ENV1_OUTPUT_OFFSET + envelope::OUT_VALUE,
     Env2Value = ENV2_OUTPUT_OFFSET + envelope::OUT_VALUE,
     Env3Value = ENV3_OUTPUT_OFFSET + envelope::OUT_VALUE,
-    //Lfo1Value,
-    //Lfo2Value,
+    //Lfo1Value = LFO1_OUTPUT_OFFSET + lfo::OUT_VALUE,
+    //Lfo2Value = LFO2_OUTPUT_OFFSET + lfo::OUT_VALUE,
 }
 
 #[derive(Debug)]
@@ -285,7 +285,7 @@ impl AudioState {
                 AudioMessage::Osc1Phase(phase) => self.osc1.set_phase_value(phase),
                 // Osc2
                 AudioMessage::Osc2Phase(phase) => self.osc2.set_phase_value(phase),
-                AudioMessage::Osc2Freq(freq) => self.osc2.set_freq_value((freq - 0.5) / 10.0),
+                AudioMessage::Osc2Freq(freq) => self.osc2.set_freq_value(freq),
                 AudioMessage::Osc2WavetableUpdate(new_wavetable) => self.osc2.update_wavetable(new_wavetable),
                 AudioMessage::Osc2Level(level) => self.osc2.set_level_value(level),
 

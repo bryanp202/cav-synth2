@@ -25,7 +25,7 @@ use sdl3::video::WindowContext;
 use sdl3::{video::Window};
 use sdl3::render::{Canvas, FPoint, FRect, Texture, TextureCreator};
 
-use crate::audio::AudioMessage;
+use crate::audio::{AudioMessage, InputJack, OutputJack};
 use crate::common::ComponentVec;
 use crate::gui::animation::Animation;
 use crate::gui::drawable::{Drawables, OnReleaseBehavior};
@@ -38,9 +38,19 @@ const JACK_INPUT_TEXTURE: usize = 1;
 const JACK_OUTPUT_TEXTURE: usize = 2;
 const KNOB_128_TEXTURE: usize = 3;
 const KNOB_4_TEXTURE: usize = 4;
-const METER_MASTER_TEXTURE: usize = 5;
-const CABLE_SLIDER_TEXTURE: usize = 6;
-const TEXTURE_COUNT: usize = 7;
+const SLIDER_CABLE_TEXTURE: usize = 5;
+const SLIDER_128_TEXTURE: usize = 6;
+const METER_MASTER_TEXTURE: usize = 7;
+const TEXTURE_COUNT: usize = 8;
+
+const JACK_WIDTH: f32 = 32.0;
+const JACK_HEIGHT: f32 = 32.0;
+
+const KNOB_128_ANIMATION: Animation = Animation::new_comptime(KNOB_128_TEXTURE, 128, 64.0, 64.0);
+const KNOB_4_ANIMATION: Animation = Animation::new_comptime(KNOB_4_TEXTURE, 4, 64.0, 64.0);
+const SLIDER_CABLE_ANIMATION: Animation = Animation::new_comptime(SLIDER_CABLE_TEXTURE, 201, 64.0, 32.0);
+const METER_MASTER_ANIMATION: Animation = Animation::new_comptime(METER_MASTER_TEXTURE, 31, 35.0, 120.0);
+const SLIDER_128_ANIMATION: Animation = Animation::new_comptime(SLIDER_128_TEXTURE, 128, 35.0, 90.0);
 
 pub struct Gui<'a> {
     audio_channel: Sender<AudioMessage>,
@@ -84,17 +94,16 @@ impl <'a> Gui <'a> {
         self.load_texture(include_bytes!("../assets/jack_output.png"));
         self.load_texture(include_bytes!("../assets/knob_basic128.png"));
         self.load_texture(include_bytes!("../assets/knob_basic4.png"));
+        self.load_texture(include_bytes!("../assets/slider_cable201_64x32.png"));
         self.load_texture(include_bytes!("../assets/slider_128_35x90.png"));
         self.load_texture(include_bytes!("../assets/meter_master31_35x120.png"));
 
-        // OSC 1
-        self.dragables.spawn(
-            FRect { x: 1200.0, y: 700.0, w: 64.0, h: 64.0 },
-            0.0,
-            (DragType::VERTICAL, OnDragBehavior::Osc1Shape),
-            dragable::OnDoubleClickBehavior::SetTo(0.0),
-            Animation::new(self.textures.len() - 2, 4, 64.0, 64.0)
-        ).unwrap();
+        self.init_osc1();
+        self.init_osc2();
+        self.init_midi();
+        self.init_lfos();
+        self.init_envs();
+        self.init_effects();
 
         // OSC 2
         self.drawables.spawn(FRect::new(502.0, 16.0, 256.0, 256.0), OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
@@ -160,5 +169,361 @@ impl <'a> Gui <'a> {
         let rgba = img.to_rgba8();
         texture.update(None, &rgba, 4 * img.width() as usize).unwrap();
         self.textures.push(texture).unwrap();
+    }
+}
+
+impl <'a> Gui <'a> {
+    fn init_osc1(&mut self) {
+        // Knobs
+        self.dragables.spawn(
+            FRect::new(32.0, 48.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.5,
+            (DragType::VERTICAL, OnDragBehavior::Osc1Level),
+            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(140.0, 48.0, KNOB_4_ANIMATION.width(), KNOB_4_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Osc1Shape),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_4_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(32.0, 160.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Osc1Phase),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(142.0, 160.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.5,
+            (DragType::VERTICAL, OnDragBehavior::Osc1Freq),
+            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+
+        // Inputs
+        self.jacks.spawn_input(
+            FRect::new(280.0, 86.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc1Freq,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(280.0, 190.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc1Phase,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(358.0, 148.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc1Amp,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(436.0, 86.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc1Level,
+        ).unwrap();
+
+        // Output
+        self.jacks.spawn_output(
+            FRect::new(436.0, 190.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Osc1Value,
+        ).unwrap();
+    }
+
+    fn init_osc2(&mut self) {
+        // Knobs
+        self.dragables.spawn(
+            FRect::new(1173.0, 50.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.5,
+            (DragType::VERTICAL, OnDragBehavior::Osc2Level),
+            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(1026.0, 50.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.5,
+            (DragType::VERTICAL, OnDragBehavior::Osc2Freq),
+            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(1100.0, 158.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Osc2Level),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+
+        // Inputs
+        self.jacks.spawn_input(
+            FRect::new(920.0, 86.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc2Freq,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(920.0, 192.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc2Phase,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(856.0, 140.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc2Amp,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(790.0, 86.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Osc2Level,
+        ).unwrap();
+
+        // Output
+        self.jacks.spawn_output(
+            FRect::new(790.0, 192.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Osc2Value,
+        ).unwrap();
+    }
+
+    fn init_midi(&mut self) {
+        self.jacks.spawn_output(
+            FRect::new(491.0, 379.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::MidiGate,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(614.0, 379.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::MidiVelocity,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(754.0, 379.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::MidiNote,
+        ).unwrap();
+    }
+
+    fn init_lfos(&mut self) {
+        // Knobs
+        self.dragables.spawn(
+            FRect::new(64.0, 312.0, KNOB_4_ANIMATION.width(), KNOB_4_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Lfo1Shape),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_4_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(62.0, 409.0, KNOB_4_ANIMATION.width(), KNOB_4_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Lfo2Shape),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_4_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(170.0, 312.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.5,
+            (DragType::VERTICAL, OnDragBehavior::Lfo1Freq),
+            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(170.0, 409.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.5,
+            (DragType::VERTICAL, OnDragBehavior::Lfo2Freq),
+            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+
+        // // Outputs
+        // self.jacks.spawn_output(
+        //     FRect::new(284.0, 328.0, JACK_WIDTH, JACK_HEIGHT),
+        //     OutputJack::Lfo1Value,
+        // ).unwrap();
+        // self.jacks.spawn_output(
+        //     FRect::new(364.0, 426.0, JACK_WIDTH, JACK_HEIGHT),
+        //     OutputJack::Lfo2Value,
+        // ).unwrap();
+    }
+
+    fn init_envs(&mut self) {
+        // Env1 ------
+        // Inputs
+        self.jacks.spawn_input(
+            FRect::new(103.0, 546.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env1Gate,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(103.0, 592.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env1Vel,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(9.0, 634.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env1Attack,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(48.0, 635.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env1Decay,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(86.0, 635.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env1Sustain,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(123.0, 635.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env1Release,
+        ).unwrap();
+        // Sliders
+        self.dragables.spawn(
+            FRect::new(10.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env1Attack),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(49.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env1Release),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(87.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env1Sustain),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(124.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env1Release),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+
+        // ENV2 ------
+        // Inputs
+        self.jacks.spawn_input(
+            FRect::new(278.0, 547.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env2Gate,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(278.0, 593.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env2Vel,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(184.0, 635.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env2Attack,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(223.0, 636.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env2Decay,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(261.0, 636.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env2Sustain,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(298.0, 636.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env2Release,
+        ).unwrap();
+        // Sliders
+        self.dragables.spawn(
+            FRect::new(185.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env2Attack),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(224.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env2Release),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(262.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env2Sustain),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(299.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env2Release),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+
+        // ENV 3 ------
+        // Inputs
+        self.jacks.spawn_input(
+            FRect::new(450.0, 547.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env3Gate,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(450.0, 593.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env3Vel,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(356.0, 635.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env3Attack,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(395.0, 636.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env3Decay,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(433.0, 636.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env3Sustain,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(470.0, 636.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Env3Release,
+        ).unwrap();
+        // Sliders
+        self.dragables.spawn(
+            FRect::new(357.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env3Attack),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(396.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env3Release),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(434.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env3Sustain),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(471.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::Env3Release),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            SLIDER_128_ANIMATION,
+        ).unwrap();
+
+        // Outputs
+        self.jacks.spawn_output(
+            FRect::new(552.0, 564.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Env1Value,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(552.0, 634.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Env2Value,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(552.0, 706.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Env3Value,
+        ).unwrap();
+    }
+
+    fn init_effects(&mut self) {
+        // Input
+        self.jacks.spawn_input(
+            FRect::new(671.0, 705.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::EffectsChain,
+        ).unwrap();
     }
 }
