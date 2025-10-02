@@ -21,6 +21,61 @@ pub use wavetable::WAVETABLE_FRAME_LENGTH;
 pub const MAX_POLY_COUNT: usize = 16;
 const MAX_CABLES: usize = 256;
 
+#[repr(usize)]
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum InputJack {
+    Osc1Freq = OSC1_INPUT_OFFSET + analog::FREQUENCY_INPUT,
+    Osc1Phase = OSC1_INPUT_OFFSET + analog::PHASE_INPUT,
+    Osc1Level = OSC1_INPUT_OFFSET + analog::LEVEL_INPUT,
+    Osc1Amp = OSC1_INPUT_OFFSET + analog::AMP_INPUT,
+    Osc2Freq = OSC2_INPUT_OFFSET + wavetable::FREQUENCY_INPUT,
+    Osc2Phase = OSC2_INPUT_OFFSET + wavetable::PHASE_INPUT,
+    Osc2Level = OSC2_INPUT_OFFSET + wavetable::LEVEL_INPUT,
+    Osc2Amp = OSC2_INPUT_OFFSET + wavetable::AMP_INPUT,
+    Filter1Cutoff = FILTER1_INPUT_OFFSET + filter::FREQUENCY_INPUT,
+    Filter1Value = FILTER1_INPUT_OFFSET + filter::VALUE_INPUT,
+    Filter2Cutoff = FILTER2_INPUT_OFFSET + filter::FREQUENCY_INPUT,
+    Filter2Value = FILTER2_INPUT_OFFSET + filter::VALUE_INPUT,
+    Env1Gate = ENV1_INPUT_OFFSET + envelope::GATE_INPUT,
+    Env1Vel = ENV1_INPUT_OFFSET + envelope::VELOCITY_INPUT,
+    Env1Attack = ENV1_INPUT_OFFSET + envelope::ATTACK_INPUT,
+    Env1Decay = ENV1_INPUT_OFFSET + envelope::DECAY_INPUT,
+    Env1Sustain = ENV1_INPUT_OFFSET + envelope::SUSTAIN_INPUT,
+    Env1Release = ENV1_INPUT_OFFSET + envelope::RELEASE_INPUT,
+    Env2Gate = ENV2_INPUT_OFFSET + envelope::GATE_INPUT,
+    Env2Vel = ENV2_INPUT_OFFSET + envelope::VELOCITY_INPUT,
+    Env2Attack = ENV2_INPUT_OFFSET + envelope::ATTACK_INPUT,
+    Env2Decay = ENV2_INPUT_OFFSET + envelope::DECAY_INPUT,
+    Env2Sustain = ENV2_INPUT_OFFSET + envelope::SUSTAIN_INPUT,
+    Env2Release = ENV2_INPUT_OFFSET + envelope::RELEASE_INPUT,
+    Env3Gate = ENV3_INPUT_OFFSET + envelope::GATE_INPUT,
+    Env3Vel = ENV3_INPUT_OFFSET + envelope::VELOCITY_INPUT,
+    Env3Attack = ENV3_INPUT_OFFSET + envelope::ATTACK_INPUT,
+    Env3Decay = ENV3_INPUT_OFFSET + envelope::DECAY_INPUT,
+    Env3Sustain = ENV3_INPUT_OFFSET + envelope::SUSTAIN_INPUT,
+    Env3Release = ENV3_INPUT_OFFSET + envelope::RELEASE_INPUT,
+    EffectsChain = EFFECTS_CHAIN_INPUT_OFFSET,
+}
+
+#[repr(usize)]
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum OutputJack {
+    MidiGate = MIDI_OUTPUT_OFFSET + midi::GATE_OUTPUT,
+    MidiNote = MIDI_OUTPUT_OFFSET + midi::NOTE_OUTPUT,
+    MidiVelocity = MIDI_OUTPUT_OFFSET + midi::VELOCITY_OUTPUT,
+    Osc1Value = OSC1_OUTPUT_OFFSET + analog::OUT_VALUE,
+    Osc2Value = OSC2_OUTPUT_OFFSET + wavetable::OUT_VALUE,
+    Filter1Value = FILTER1_OUTPUT_OFFSET + filter::VALUE_OUTPUT,
+    Fitler2Value = FILTER2_OUTPUT_OFFSET + filter::VALUE_OUTPUT,
+    Env1Value = ENV1_OUTPUT_OFFSET + envelope::OUT_VALUE,
+    Env2Value = ENV2_OUTPUT_OFFSET + envelope::OUT_VALUE,
+    Env3Value = ENV3_OUTPUT_OFFSET + envelope::OUT_VALUE,
+    //Lfo1Value,
+    //Lfo2Value,
+}
+
 #[derive(Debug)]
 pub enum AudioMessage {
     Osc1Freq(f32),
@@ -32,6 +87,9 @@ pub enum AudioMessage {
     KeyRelease(u8),
     PedalPress,
     PedalRelease,
+    CableConnection(InputJack, OutputJack),
+    CableAttenuation(usize, f32),
+    CableRemove(usize),
 }
 
 pub fn init(receiver: mpsc::Receiver<AudioMessage>) -> Result<cpal::Stream, String> {
@@ -97,7 +155,7 @@ where
 
 const EFFECTS_CHAIN_INPUT_OFFSET: usize = 0;
 const OSC1_INPUT_OFFSET: usize = MAX_POLY_COUNT;
-const OSC2_INPUT_OFFSET: usize = analog::TOTAL_INPUT_COUNT;
+const OSC2_INPUT_OFFSET: usize = OSC1_INPUT_OFFSET + analog::TOTAL_INPUT_COUNT;
 const ENV1_INPUT_OFFSET: usize = OSC2_INPUT_OFFSET + wavetable::TOTAL_INPUT_COUNT;
 const ENV2_INPUT_OFFSET: usize = ENV1_INPUT_OFFSET + envelope::TOTAL_INPUT_COUNT;
 const ENV3_INPUT_OFFSET: usize = ENV2_INPUT_OFFSET + envelope::TOTAL_INPUT_COUNT;
@@ -156,22 +214,7 @@ impl AudioState {
     }
 
     pub fn init(&mut self) {
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::NOTE_OUTPUT, OSC1_INPUT_OFFSET + analog::FREQUENCY_INPUT).unwrap();
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::NOTE_OUTPUT, OSC2_INPUT_OFFSET + analog::FREQUENCY_INPUT).unwrap();
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::GATE_OUTPUT, ENV1_INPUT_OFFSET + envelope::GATE_INPUT).unwrap();
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::VELOCITY_OUTPUT, ENV1_INPUT_OFFSET + envelope::VELOCITY_INPUT).unwrap();
-        self.cables.add_cable(ENV1_OUTPUT_OFFSET + envelope::OUT_VALUE, OSC1_INPUT_OFFSET + analog::LEVEL_INPUT).unwrap();
-        self.cables.add_cable(ENV1_OUTPUT_OFFSET + envelope::OUT_VALUE, OSC2_INPUT_OFFSET + analog::LEVEL_INPUT).unwrap();
-        self.cables.add_cable(ENV2_OUTPUT_OFFSET + envelope::OUT_VALUE, FILTER1_INPUT_OFFSET + analog::FREQUENCY_INPUT).unwrap();
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::GATE_OUTPUT, ENV2_INPUT_OFFSET + envelope::GATE_INPUT).unwrap();
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::VELOCITY_OUTPUT, ENV2_INPUT_OFFSET + envelope::VELOCITY_INPUT).unwrap();
-        self.cables.add_cable(ENV3_OUTPUT_OFFSET + envelope::OUT_VALUE, FILTER2_INPUT_OFFSET + analog::FREQUENCY_INPUT).unwrap();
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::GATE_OUTPUT, ENV3_INPUT_OFFSET + envelope::GATE_INPUT).unwrap();
-        self.cables.add_cable(MIDI_OUTPUT_OFFSET + midi::VELOCITY_OUTPUT, ENV3_INPUT_OFFSET + envelope::VELOCITY_INPUT).unwrap();
-        self.cables.add_cable(OSC1_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER1_INPUT_OFFSET).unwrap();
-        self.cables.add_cable(OSC2_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER1_INPUT_OFFSET).unwrap();
-        self.cables.add_cable(FILTER1_OUTPUT_OFFSET + analog::OUT_VALUE, FILTER2_INPUT_OFFSET).unwrap();
-        self.cables.add_cable(FILTER2_OUTPUT_OFFSET + analog::OUT_VALUE, EFFECTS_CHAIN_INPUT_OFFSET).unwrap();
+        _ = self;
     }
 }
 
@@ -207,13 +250,21 @@ impl AudioState {
                 AudioMessage::PedalRelease => self.midi.pedal_release(&mut self.outputs),
                 AudioMessage::Osc2Freq(freq) => {
                     self.osc2.set_freq_value((freq - 0.5) / 10.0);
-                }
+                },
                 AudioMessage::Osc2WavetableUpdate(new_wavetable) => {
                     self.osc2.update_wavetable(new_wavetable);
+                },
+                AudioMessage::CableConnection(target, source) => {
+                    self.cables.add_cable(source, target).unwrap();
+                }
+                AudioMessage::CableAttenuation(cable_index, new_value) => {
+                    self.cables.attenaute(cable_index, new_value);
+                },
+                AudioMessage::CableRemove(cable_index) => {
+                    self.cables.remove_cable(cable_index);
                 }
             }
         }
     }
 }
-
 

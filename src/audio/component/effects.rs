@@ -49,7 +49,7 @@ impl Distortion {
 
     fn render(&self, input: f32) -> f32 {
         let drive_value = self.drive * input;
-        let wet_value = drive_value.powf(3.0).clamp(-1.0, 1.0);
+        let wet_value = drive_value.powf(3.0);
         let out_value = input + (wet_value - input) * self.wet;
         out_value
     }
@@ -65,7 +65,7 @@ struct Delay {
 impl Delay {
     fn new() -> Self {
         Self {
-            wet: 0.5,
+            wet: 0.0,
             delay_index: 24000,
             buffer: VecDeque::new(),
         }

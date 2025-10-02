@@ -6,13 +6,15 @@ mod synth;
 mod common;
 
 const FRAME_RATE: usize = 60;
+const SCREEN_WIDTH: u32 = 1920;
+const SCREEN_HEIGHT: u32 = 1080;
 
 fn main() {
     //unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
     let sdl3_context = sdl3::init().expect("Failed to initialize sdl3");
     let video_subsystem = sdl3_context.video().expect("Failed to initialize video subsystem");
     
-    let window = video_subsystem.window("Cav-Synth2", 1920, 1080)
+    let window = video_subsystem.window("Cav-Synth2", SCREEN_WIDTH, SCREEN_HEIGHT)
         .borderless()
         .build()
         .expect("Failed to make window");

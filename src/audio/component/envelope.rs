@@ -48,21 +48,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
             let sustain = self.sustain + inputs[INPUT_OFFSET + SUSTAIN_INPUT + envelope];
             let release = self.release + inputs[INPUT_OFFSET + RELEASE_INPUT + envelope];
 
-            if gate != 0.0 {
-                if let None = meta.start {
-                    meta.start = Some(Instant::now());
-                    meta.released = None;
-                }
-            } else {
-                if let None = meta.released {
-                    if let Some(_) = meta.start {
-                        meta.start = None;
-                        meta.released = Some(Instant::now());
-                        meta.release_start_value = outputs[OUTPUT_OFFSET + OUT_VALUE + envelope] / velocity;
-                    }
-                }
-            }
-            let out = if let Some(start_time) = meta.start {
+            let raw = if let Some(start_time) = meta.start {
                 let elapsed = start_time.elapsed().as_secs_f32();
                 if elapsed < attack {
                     1.0 * elapsed / attack
@@ -88,7 +74,22 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
                 0.0
             };
 
-            outputs[OUTPUT_OFFSET + OUT_VALUE + envelope] = out * velocity;
+            if gate != 0.0 {
+                if let None = meta.start {
+                    meta.start = Some(Instant::now());
+                    meta.released = None;
+                }
+            } else {
+                if let None = meta.released {
+                    if let Some(_) = meta.start {
+                        meta.start = None;
+                        meta.released = Some(Instant::now());
+                        meta.release_start_value = raw;
+                    }
+                }
+            }
+
+            outputs[OUTPUT_OFFSET + OUT_VALUE + envelope] = raw * velocity;
         }
     }
 }

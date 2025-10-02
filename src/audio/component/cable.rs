@@ -1,4 +1,4 @@
-use crate::{audio::MAX_POLY_COUNT, common::ComponentVec};
+use crate::{audio::{component::cable, InputJack, OutputJack, MAX_POLY_COUNT}, common::ComponentVec};
 
 pub struct Cables <const MAX_CABLES: usize> (ComponentVec <Cable, MAX_CABLES>);
 
@@ -7,30 +7,41 @@ impl <const MAX_CABLES: usize> Cables <MAX_CABLES> {
         Self (ComponentVec::new())
     }
 
-    pub fn add_cable(&mut self, source: usize, target: usize) -> Result<(), ()> {
+    pub fn add_cable(&mut self, source: OutputJack, target: InputJack) -> Result<(), ()> {
         self.0.push(Cable::new(source, target))
+    }
+
+    pub fn remove_cable(&mut self, cable_index: usize) {
+        self.0.remove(cable_index);
     }
 
     pub fn run_cables(&self, inputs: &mut [f32], outputs: &[f32]) {
         inputs.fill(0.0);
         for cable in self.0.iter() {
             for i in 0..MAX_POLY_COUNT {
-                inputs[cable.target + i] += outputs[cable.source + i];
+                inputs[cable.target as usize + i] += outputs[cable.source as usize + i] * cable.gain;
             }
         }
     }
+
+    pub fn attenaute(&mut self, cable_index: usize, new_value: f32) {
+        self.0[cable_index].gain = new_value;
+    }
 }
 
+#[derive(Debug)]
 struct Cable {
-    source: usize,
-    target: usize,
+    source: OutputJack,
+    target: InputJack,
+    gain: f32,
 }
 
 impl Cable {
-    pub fn new(source: usize, target: usize) -> Self {
+    pub fn new(source: OutputJack, target: InputJack) -> Self {
         Self {
             source,
             target,
+            gain: 1.0,
         }
     }
 }

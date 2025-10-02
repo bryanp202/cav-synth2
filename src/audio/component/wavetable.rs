@@ -5,7 +5,8 @@ use crate::audio::MAX_POLY_COUNT;
 pub const LEVEL_INPUT: usize = 0 * MAX_POLY_COUNT;
 pub const FREQUENCY_INPUT: usize = 1 * MAX_POLY_COUNT;
 pub const PHASE_INPUT: usize = 2 * MAX_POLY_COUNT;
-pub const TOTAL_INPUT_COUNT: usize = 3 * MAX_POLY_COUNT;
+pub const AMP_INPUT: usize = 3 * MAX_POLY_COUNT;
+pub const TOTAL_INPUT_COUNT: usize = 4 * MAX_POLY_COUNT;
 
 pub const OUT_VALUE: usize = 0 * MAX_POLY_COUNT;
 pub const TOTAL_OUTPUT_COUNT: usize = 1 * MAX_POLY_COUNT;
@@ -26,7 +27,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPU
     pub fn new() -> Self {
         Self {
             wavetable: Arc::new([0.0; WAVETABLE_FRAME_LENGTH * WAVETABLE_VARIATION_COUNT]),
-            level: 0.0,
+            level: 0.5,
             frequency: 0.0,
             phase: 0.0,
             current_phases: [0.0; MAX_POLY_COUNT],
@@ -43,9 +44,10 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPU
 
     pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32], sample_rate: f32) {
         for (wavetable, current_phase) in self.current_phases.iter_mut().enumerate() {
-            let phase_input = inputs[INPUT_OFFSET + PHASE_INPUT + wavetable];
+            let phase_input = inputs[INPUT_OFFSET + PHASE_INPUT + wavetable] * WAVETABLE_FRAME_LENGTH as f32;
             let frequency_input = inputs[INPUT_OFFSET + FREQUENCY_INPUT + wavetable];
             let level_input = inputs[INPUT_OFFSET + LEVEL_INPUT + wavetable];
+            let amp_input = inputs[INPUT_OFFSET + AMP_INPUT + wavetable];
 
             let level = self.level + level_input;
             let voltage = self.frequency + frequency_input;
@@ -57,7 +59,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPU
 
             *current_phase = (*current_phase + phase_increment) % WAVETABLE_FRAME_LENGTH as f32;
 
-            let scaled_raw = raw as f32 * level;
+            let scaled_raw = raw as f32 * level * amp_input;
             outputs[OUTPUT_OFFSET + OUT_VALUE + wavetable] = scaled_raw;
         }
     }

@@ -25,7 +25,7 @@ use sdl3::video::WindowContext;
 use sdl3::{video::Window};
 use sdl3::render::{Canvas, FPoint, FRect, Texture, TextureCreator};
 
-use crate::audio::AudioMessage;
+use crate::audio::{AudioMessage, InputJack, OutputJack};
 use crate::common::ComponentVec;
 use crate::gui::animation::Animation;
 use crate::gui::drawable::Drawables;
@@ -35,7 +35,8 @@ use crate::gui::dragable::{DragType, Dragables, OnDragBehavior};
 
 const JACK_INPUT_TEXTURE: usize = 4;
 const JACK_OUTPUT_TEXTURE: usize = 5;
-const TEXTURE_COUNT: usize = 7;
+const CABLE_SLIDER_TEXTURE: usize = 7;
+const TEXTURE_COUNT: usize = 8;
 
 pub struct Gui<'a> {
     audio_channel: Sender<AudioMessage>,
@@ -81,6 +82,7 @@ impl <'a> Gui <'a> {
         self.load_texture(include_bytes!("../assets/jack_input.png"));
         self.load_texture(include_bytes!("../assets/jack_output.png"));
         self.load_texture(include_bytes!("../assets/knob_basic4.png"));
+        self.load_texture(include_bytes!("../assets/slider_cable.png"));
 
 
         for x in 0..10 {
@@ -132,28 +134,82 @@ impl <'a> Gui <'a> {
             }
         }
 
-        for x in 0..5 {
-            let x = x as f32 * 32.0;
-            for y in 0..3 {
-                let y = y as f32 * 32.0;
-                self.jacks.spawn_input(
-                    FRect::new(800.0 + x, 800.0 + x + y, 32.0, 32.0),
-                    jacks::InputJack::Osc1Freq,
-                ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*0.0, 800.0, 32.0, 32.0),
+            InputJack::Osc1Freq,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*1.0, 800.0, 32.0, 32.0),
+            InputJack::Osc1Phase,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*2.0, 800.0, 32.0, 32.0),
+            InputJack::Osc1Level,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*3.0, 800.0, 32.0, 32.0),
+            InputJack::Osc1Amp,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*0.0, 800.0 + 64.0, 32.0, 32.0),
+            InputJack::Osc2Freq,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*1.0, 800.0 + 64.0, 32.0, 32.0),
+            InputJack::Osc2Phase,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*2.0, 800.0 + 64.0, 32.0, 32.0),
+            InputJack::Osc2Level,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*3.0, 800.0 + 64.0, 32.0, 32.0),
+            InputJack::Osc2Amp,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*0.0, 800.0 + 64.0*2.0, 32.0, 32.0),
+            InputJack::Env1Vel,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*1.0, 800.0 + 64.0*2.0, 32.0, 32.0),
+            InputJack::Env1Gate,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1000.0 + 64.0*0.0, 800.0 + 64.0*3.0, 32.0, 32.0),
+            InputJack::EffectsChain,
+        ).unwrap();
 
-                self.jacks.spawn_output(
-                    FRect::new(200.0 + x, 800.0 + x + y, 32.0, 32.0),
-                    jacks::OutputJack::Osc1Value,
-                ).unwrap();
-            }
-        }
+        self.jacks.spawn_output(
+            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*0.0, 32.0, 32.0),
+            OutputJack::MidiGate,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(200.0 + 64.0*1.0, 800.0 + 64.0*0.0, 32.0, 32.0),
+            OutputJack::MidiNote,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(200.0 + 64.0*2.0, 800.0 + 64.0*0.0, 32.0, 32.0),
+            OutputJack::MidiVelocity,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*1.0, 32.0, 32.0),
+            OutputJack::Env1Value,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*2.0, 32.0, 32.0),
+            OutputJack::Osc1Value,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*3.0, 32.0, 32.0),
+            OutputJack::Osc2Value,
+        ).unwrap();
 
         self.dragables.spawn(
             FRect { x: 1200.0, y: 700.0, w: 64.0, h: 64.0 },
             0.0,
             (DragType::VERTICAL, OnDragBehavior::Osc1Shape),
             dragable::OnDoubleClickBehavior::SetTo(0.0),
-            Animation::new(self.textures.len() - 1, 4, 64.0, 64.0)
+            Animation::new(self.textures.len() - 2, 4, 64.0, 64.0)
         ).unwrap();
         self.drawables.spawn(FRect { x: 1300.0, y: 500.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
         self.drawables.spawn(FRect { x: 1300.0, y: 100.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
@@ -168,8 +224,7 @@ impl <'a> Gui <'a> {
         canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
         jacks::render_system(
             canvas,
-            &self.textures[JACK_OUTPUT_TEXTURE],
-            &self.textures[JACK_INPUT_TEXTURE],
+            &self.textures,
             &mut self.jacks,
             self.mouse_pos
         )?;
@@ -188,17 +243,22 @@ impl <'a> Gui <'a> {
     pub fn left_mouse_up(&mut self, clicks: u8)  {
         dragable::on_left_release_system(&mut self.dragables);
         drawable::on_left_release_system(&mut self.audio_channel, &mut self.drawables);
-        jacks::on_left_release_system(&mut self.jacks, self.mouse_pos);
+        jacks::on_left_release_system(&mut self.audio_channel, &mut self.jacks, self.mouse_pos);
     }
 
     pub fn right_mouse_down(&mut self, x: f32, y: f32, clicks: u8) {
-        jacks::on_right_down_system(&mut self.jacks, x, y);
+        jacks::on_right_down_system(&mut self.audio_channel, &mut self.jacks, x, y, clicks);
+    }
+
+    pub fn right_mouse_up(&mut self, clicks: u8) {
+        jacks::on_right_release_system(&mut self.jacks);
     }
 
     pub fn mouse_move(&mut self, x: f32, y: f32, xrel: f32, yrel: f32) {
         self.mouse_pos = FPoint::new(x, y);
         dragable::on_mouse_move_system(&mut self.audio_channel, &mut self.dragables, xrel, yrel);
         drawable::on_mouse_move_system(&mut self.drawables, x, y);
+        jacks::on_mouse_move_system(&mut self.audio_channel, &mut self.jacks, xrel, yrel);
     }
 
     pub fn text_input(&mut self, text: String) {

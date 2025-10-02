@@ -53,6 +53,7 @@ impl <'a> Synth<'a> {
                 Event::MouseButtonUp { mouse_btn, clicks, .. } => {
                     match mouse_btn {
                         MouseButton::Left => self.gui.left_mouse_up(clicks),
+                        MouseButton::Right => self.gui.right_mouse_up(clicks),
                         _ => {},
                     };
                 },
