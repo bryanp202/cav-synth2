@@ -19,13 +19,13 @@ mod toggleable;
 use core::f32;
 use std::sync::mpsc::Sender;
 use realfft::RealFftPlanner;
-use sdl3::pixels::{Color, PixelFormat};
+use sdl3::pixels::PixelFormat;
 use sdl3::sys::pixels::SDL_PIXELFORMAT_ABGR8888;
 use sdl3::video::WindowContext;
 use sdl3::{video::Window};
 use sdl3::render::{Canvas, FPoint, FRect, Texture, TextureCreator};
 
-use crate::audio::{AudioMessage, InputJack, OutputJack};
+use crate::audio::AudioMessage;
 use crate::common::ComponentVec;
 use crate::gui::animation::Animation;
 use crate::gui::drawable::{Drawables, OnReleaseBehavior};
@@ -58,7 +58,7 @@ pub struct Gui<'a> {
     textures: ComponentVec<Texture<'a>, TEXTURE_COUNT>,
     texture_creator: &'a TextureCreator<WindowContext>,
     // FFT
-    fft_planner: RealFftPlanner<f32>,
+    _fft_planner: RealFftPlanner<f32>,
 }
 
 impl <'a> Gui <'a> {
@@ -74,7 +74,7 @@ impl <'a> Gui <'a> {
             drawables: Drawables::new(&mut fft_planner),
             textures: ComponentVec::new(),
             texture_creator,
-            fft_planner
+            _fft_planner: fft_planner,
         }
     }
 
@@ -124,7 +124,7 @@ impl <'a> Gui <'a> {
         jacks::on_left_down_system(&mut self.jacks, x, y);
     }
 
-    pub fn left_mouse_up(&mut self, clicks: u8)  {
+    pub fn left_mouse_up(&mut self, _clicks: u8)  {
         dragable::on_left_release_system(&mut self.dragables);
         drawable::on_left_release_system(&mut self.audio_channel, &mut self.drawables);
         jacks::on_left_release_system(&mut self.audio_channel, &mut self.jacks, self.mouse_pos);
@@ -134,7 +134,7 @@ impl <'a> Gui <'a> {
         jacks::on_right_down_system(&mut self.audio_channel, &mut self.jacks, x, y, clicks);
     }
 
-    pub fn right_mouse_up(&mut self, clicks: u8) {
+    pub fn right_mouse_up(&mut self, _clicks: u8) {
         jacks::on_right_release_system(&mut self.jacks);
     }
 
@@ -145,7 +145,7 @@ impl <'a> Gui <'a> {
         jacks::on_mouse_move_system(&mut self.audio_channel, &mut self.jacks, xrel, yrel);
     }
 
-    pub fn text_input(&mut self, text: String) {
+    pub fn text_input(&mut self, _text: String) {
 
     }
 

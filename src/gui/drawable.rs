@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, sync::{mpsc, Arc}};
 
 use realfft::{num_complex::Complex, num_traits::Zero, ComplexToReal, RealFftPlanner, RealToComplex};
-use sdl3::{pixels::{Color, FColor}, render::{Canvas, FRect}, video::Window};
+use sdl3::{pixels::FColor, render::{Canvas, FRect}, video::Window};
 
 use crate::{audio::{AudioMessage, Wavetable, WAVETABLE_FRAME_LENGTH}, common::{point_in_frect, ComponentVec}};
 
