@@ -6,8 +6,8 @@ mod synth;
 mod common;
 
 const FRAME_RATE: usize = 60;
-const SCREEN_WIDTH: u32 = 1920;
-const SCREEN_HEIGHT: u32 = 1080;
+const SCREEN_WIDTH: u32 = 1260;
+const SCREEN_HEIGHT: u32 = 800;
 
 fn main() {
     //unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
@@ -15,7 +15,6 @@ fn main() {
     let video_subsystem = sdl3_context.video().expect("Failed to initialize video subsystem");
     
     let window = video_subsystem.window("Cav-Synth2", SCREEN_WIDTH, SCREEN_HEIGHT)
-        .borderless()
         .build()
         .expect("Failed to make window");
     let canvas = window.into_canvas();

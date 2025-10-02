@@ -6,6 +6,7 @@ pub struct EffectsChain {
     distortion: Distortion,
     delay: Delay,
     reverb: Reverb,
+    master_gain: f32,
 }
 
 impl EffectsChain {
@@ -14,23 +15,49 @@ impl EffectsChain {
             distortion: Distortion::new(),
             delay: Delay::new(),
             reverb: Reverb::new(),
+            master_gain: 1.0,
         }
     }
 
-    pub fn set_delay_time(&mut self, delay_index: usize) {
+    pub fn set_dist_drive(&mut self, drive: f32) {
+        self.distortion.drive = drive;
+    }
+
+    pub fn set_dist_wet(&mut self, wet: f32) {
+        self.distortion.wet = wet;
+    }
+
+    pub fn set_delay_time(&mut self, value: f32, sample_rate: f32) {
+        let delay_index = (value * sample_rate) as usize;
         self.delay.delay_index = delay_index;
         self.delay.buffer.shrink_to(delay_index);
     }
 
-    pub fn set_delay_wet_ratio(&mut self, wet: f32) {
+    pub fn set_delay_feedback(&mut self, feedback: f32) {
+        self.delay.feedback = feedback;
+    }
+
+    pub fn set_delay_wet(&mut self, wet: f32) {
         self.delay.wet = wet;
+    }
+
+    pub fn set_reverb_time(&mut self, time: f32) {
+        self.reverb.time = time;
+    }
+
+    pub fn set_reverb_wet(&mut self, wet: f32) {
+        self.reverb.wet = wet;
+    }
+
+    pub fn set_master_gain(&mut self, gain: f32) {
+        self.master_gain = gain;
     }
 
     pub fn render(&mut self, inputs: &[f32; MAX_POLY_COUNT]) -> (f32, f32) {
         let input = inputs.iter().sum();
         let distorted = self.distortion.render(input);
         let delayed = self.delay.render(distorted);
-        self.reverb.render(delayed)
+        self.reverb.render(delayed * self.master_gain)
     }
 }
 
@@ -57,6 +84,7 @@ impl Distortion {
 
 struct Delay {
     wet: f32,
+    feedback: f32,
     delay_index: usize,
     // State
     buffer: VecDeque<f32>,
@@ -66,6 +94,7 @@ impl Delay {
     fn new() -> Self {
         Self {
             wet: 0.0,
+            feedback: 0.7,
             delay_index: 24000,
             buffer: VecDeque::new(),
         }
@@ -75,19 +104,21 @@ impl Delay {
         let wet_value = self.buffer.remove(self.delay_index).unwrap_or_default();
         let out_value = input + (wet_value - input) * self.wet;
 
-        self.buffer.push_front(out_value);
+        self.buffer.push_front((input + wet_value) * self.feedback);
         out_value
     }
 }
 
 struct Reverb {
     wet: f32,
+    time: f32,
 }
 
 impl Reverb {
     fn new() -> Self {
         Self {
-            wet: 0.0
+            wet: 0.0,
+            time: 0.0,
         }
     }
 

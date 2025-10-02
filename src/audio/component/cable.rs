@@ -1,4 +1,4 @@
-use crate::{audio::{component::cable, InputJack, OutputJack, MAX_POLY_COUNT}, common::ComponentVec};
+use crate::{audio::{InputJack, OutputJack, MAX_POLY_COUNT}, common::ComponentVec};
 
 pub struct Cables <const MAX_CABLES: usize> (ComponentVec <Cable, MAX_CABLES>);
 

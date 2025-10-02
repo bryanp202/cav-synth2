@@ -1,11 +1,11 @@
 use std::{cmp::Ordering, sync::{mpsc, Arc}};
 
 use realfft::{num_complex::Complex, num_traits::Zero, ComplexToReal, RealFftPlanner, RealToComplex};
-use sdl3::{pixels::Color, render::{Canvas, FPoint, FRect}, video::Window};
+use sdl3::{pixels::{Color, FColor}, render::{Canvas, FRect}, video::Window};
 
 use crate::{audio::{AudioMessage, Wavetable, WAVETABLE_FRAME_LENGTH}, common::{point_in_frect, ComponentVec}};
 
-const MAX_DRAWABLE_COUNT: usize = 2;
+const MAX_DRAWABLE_COUNT: usize = 1;
 
 #[derive(Clone, Copy)]
 pub enum OnReleaseBehavior {
@@ -72,10 +72,12 @@ pub fn on_mouse_move_system(drawables: &mut Drawables, x: f32, y: f32) {
     }
 }
 pub fn render_system(canvas: &mut Canvas<Window>, drawables: &Drawables) -> Result<(), sdl3::Error> {
-    canvas.set_draw_color(Color::CYAN);
+    canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
+    canvas.set_draw_color(FColor::RGBA(0.0, 1.0, 1.0, 0.6));
     for values in drawables.values.iter() {
         canvas.draw_rects(&values)?;
     }
+    canvas.set_blend_mode(sdl3::render::BlendMode::None);
     Ok(())
 }
 

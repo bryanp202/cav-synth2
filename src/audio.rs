@@ -78,15 +78,59 @@ pub enum OutputJack {
 
 #[derive(Debug)]
 pub enum AudioMessage {
+    // Osc1
     Osc1Freq(f32),
     Osc1Shape(analog::WaveShape),
+    Osc1Phase(f32),
+    Osc1Level(f32),
+    // Osc2
     Osc2Freq(f32),
+    Osc2Phase(f32),
+    Osc2Level(f32),
     Osc2WavetableUpdate(Arc<wavetable::Wavetable>),
+    // Lfo1
+    Lfo1Shape(analog::WaveShape),
+    Lfo1Freq(f32),
+    // Flo2
+    Lfo2Shape(analog::WaveShape),
+    Lfo2Freq(f32),
+    // Filter1
+    Filter1Freq(f32),
+    //Filter2,
+    Filter2Freq(f32),
+    // Env1
+    Env1Attack(f32),
+    Env1Decay(f32),
+    Env1Release(f32),
+    Env1Sustain(f32),
+    // Env2
+    Env2Attack(f32),
+    Env2Decay(f32),
+    Env2Release(f32),
+    Env2Sustain(f32),
+    // Env3
+    Env3Attack(f32),
+    Env3Decay(f32),
+    Env3Release(f32),
+    Env3Sustain(f32),
+    // Effects -- Dist
+    DistDrive(f32),
+    DistWet(f32),
+    // Delay
+    DelayFeedback(f32),
     DelayTime(f32),
+    DelayWet(f32),
+    // Reverb
+    ReverbTime(f32),
+    ReverbWet(f32),
+    // Master
+    MasterGain(f32),
+    // Midi
     KeyPress(u8, u8),
     KeyRelease(u8),
     PedalPress,
     PedalRelease,
+    // Cables
     CableConnection(InputJack, OutputJack),
     CableAttenuation(usize, f32),
     CableRemove(usize),
@@ -235,34 +279,69 @@ impl AudioState {
     fn update(&mut self) {
         for msg in self.receiver.try_iter() {
             match msg {
-                AudioMessage::Osc1Freq(freq) => {
-                    self.osc1.set_freq_value((freq - 0.5) / 10.0);
-                },
-                AudioMessage::Osc1Shape(shape) => {
-                    self.osc1.set_shape(shape);
-                },
-                AudioMessage::DelayTime(time) => {
-                    self.effects_chain.set_delay_time((time as f64 * self.sample_rate) as usize);
-                },
+                AudioMessage::Osc1Freq(freq) => self.osc1.set_freq_value(freq),
+                AudioMessage::Osc1Shape(shape) => self.osc1.set_shape(shape),
+                AudioMessage::Osc1Level(level) => self.osc1.set_level_value(level),
+                AudioMessage::Osc1Phase(phase) => self.osc1.set_phase_value(phase),
+                // Osc2
+                AudioMessage::Osc2Phase(phase) => self.osc2.set_phase_value(phase),
+                AudioMessage::Osc2Freq(freq) => self.osc2.set_freq_value((freq - 0.5) / 10.0),
+                AudioMessage::Osc2WavetableUpdate(new_wavetable) => self.osc2.update_wavetable(new_wavetable),
+                AudioMessage::Osc2Level(level) => self.osc2.set_level_value(level),
+
+                // Lfo1
+                AudioMessage::Lfo1Freq(freq) => {},
+                AudioMessage::Lfo1Shape(shape) => {},
+                // Lfo2
+                AudioMessage::Lfo2Freq(freq) => {},
+                AudioMessage::Lfo2Shape(shape) => {},
+
+                // Filter1
+                AudioMessage::Filter1Freq(freq) => self.filter1.set_freq_value(freq),
+                // Filter2
+                AudioMessage::Filter2Freq(freq) => self.filter2.set_freq_value(freq),
+
+                // Env1
+                AudioMessage::Env1Attack(attack) => self.env1.set_attack_value(attack),
+                AudioMessage::Env1Decay(decay) => self.env1.set_decay_value(decay),
+                AudioMessage::Env1Sustain(sustain) => self.env1.set_sustain_value(sustain),
+                AudioMessage::Env1Release(release) => self. env1.set_release_value(release),
+                // Env1
+                AudioMessage::Env2Attack(attack) => self.env2.set_attack_value(attack),
+                AudioMessage::Env2Decay(decay) => self.env2.set_decay_value(decay),
+                AudioMessage::Env2Sustain(sustain) => self.env2.set_sustain_value(sustain),
+                AudioMessage::Env2Release(release) => self. env2.set_release_value(release),
+                // Env1
+                AudioMessage::Env3Attack(attack) => self.env3.set_attack_value(attack),
+                AudioMessage::Env3Decay(decay) => self.env3.set_decay_value(decay),
+                AudioMessage::Env3Sustain(sustain) => self.env3.set_sustain_value(sustain),
+                AudioMessage::Env3Release(release) => self. env3.set_release_value(release),
+
+                // Effects
+                // Distortion
+                AudioMessage::DistDrive(drive) => self.effects_chain.set_dist_drive(drive),
+                AudioMessage::DistWet(wet) => self.effects_chain.set_dist_wet(wet),
+                // Delay
+                AudioMessage::DelayWet(wet) => self.effects_chain.set_delay_wet(wet),
+                AudioMessage::DelayFeedback(feedback) => self.effects_chain.set_delay_feedback(feedback),
+                AudioMessage::DelayTime(time) => self.effects_chain.set_delay_time(time, self.sample_rate as f32),
+                // Reverb
+                AudioMessage::ReverbTime(time) => self.effects_chain.set_reverb_time(time),
+                AudioMessage::ReverbWet(wet) => self.effects_chain.set_reverb_wet(wet),
+
+                // Master
+                AudioMessage::MasterGain(gain) => self.effects_chain.set_master_gain(gain),
+
+                // Midi
                 AudioMessage::KeyPress(velocity, note) => self.midi.key_press(&mut self.outputs, note, velocity),
                 AudioMessage::KeyRelease(note) => self.midi.key_release(&mut self.outputs, note),
                 AudioMessage::PedalPress => self.midi.pedal_press(),
                 AudioMessage::PedalRelease => self.midi.pedal_release(&mut self.outputs),
-                AudioMessage::Osc2Freq(freq) => {
-                    self.osc2.set_freq_value((freq - 0.5) / 10.0);
-                },
-                AudioMessage::Osc2WavetableUpdate(new_wavetable) => {
-                    self.osc2.update_wavetable(new_wavetable);
-                },
-                AudioMessage::CableConnection(target, source) => {
-                    self.cables.add_cable(source, target).unwrap();
-                }
-                AudioMessage::CableAttenuation(cable_index, new_value) => {
-                    self.cables.attenaute(cable_index, new_value);
-                },
-                AudioMessage::CableRemove(cable_index) => {
-                    self.cables.remove_cable(cable_index);
-                }
+
+                // Cables
+                AudioMessage::CableConnection(target, source) => self.cables.add_cable(source, target).unwrap(),
+                AudioMessage::CableAttenuation(cable_index, new_value) => self.cables.attenaute(cable_index, new_value),
+                AudioMessage::CableRemove(cable_index) => self.cables.remove_cable(cable_index),
             }
         }
     }

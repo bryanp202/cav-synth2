@@ -39,6 +39,22 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
         }
     }
 
+    pub fn set_attack_value(&mut self, attack: f32) {
+        self.attack = attack;
+    }
+
+    pub fn set_decay_value(&mut self, decay: f32) {
+        self.decay = decay;
+    }
+
+    pub fn set_sustain_value(&mut self, sustain: f32) {
+        self.sustain = sustain;
+    }
+
+    pub fn set_release_value(&mut self, release: f32) {
+        self.release = release;
+    }
+
     pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32]) {
         for (envelope, meta) in self.envelopes.iter_mut().enumerate() {
             let velocity = inputs[INPUT_OFFSET + VELOCITY_INPUT + envelope];
@@ -74,7 +90,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
                 0.0
             };
 
-            if gate != 0.0 {
+            if gate > 0.0 {
                 if let None = meta.start {
                     meta.start = Some(Instant::now());
                     meta.released = None;

@@ -42,6 +42,14 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPU
         self.frequency = freq;
     }
 
+    pub fn set_phase_value(&mut self, phase: f32) {
+        self.phase = phase;
+    }
+
+    pub fn set_level_value(&mut self, level: f32) {
+        self.level = level;
+    }
+
     pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32], sample_rate: f32) {
         for (wavetable, current_phase) in self.current_phases.iter_mut().enumerate() {
             let phase_input = inputs[INPUT_OFFSET + PHASE_INPUT + wavetable] * WAVETABLE_FRAME_LENGTH as f32;

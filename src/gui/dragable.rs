@@ -2,7 +2,7 @@ use std::sync::mpsc;
 
 use sdl3::{render::{Canvas, FRect, Texture}, video::Window};
 
-use crate::{audio::{AudioMessage, WaveShape}, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
+use crate::{audio::{self, AudioMessage, WaveShape}, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
 
 const MAX_DRAGABLE_COUNT: usize = 228;
 
@@ -18,7 +18,37 @@ pub enum DragType {
 pub enum OnDragBehavior {
     Osc1Freq,
     Osc1Shape,
-    DelayTime,
+    Osc1Level,
+    Osc1Phase,
+    Osc2Level,
+    Osc2Freq,
+    Osc2Phase,
+    Lfo1Shape,
+    Lfo1Freq,
+    Lfo2Shape,
+    Lfo2Freq,
+    Filter1Freq,
+    Filter2Freq,
+    Env1Attack,
+    Env1Decay,
+    Env1Release,
+    Env1Sustain,
+    Env2Attack,
+    Env2Decay,
+    Env2Release,
+    Env2Sustain,
+    Env3Attack,
+    Env3Decay,
+    Env3Release,
+    Env3Sustain,
+    EffectDistDrive,
+    EffectDistWet,
+    EffectDelayFeedback,
+    EffectDelayTime,
+    EffectDelayWet,
+    EffectReverbTime,
+    EffectReverbWet,
+    MasterGain,
 }
 
 #[derive(Clone, Copy)]
@@ -113,8 +143,9 @@ fn on_drag_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, value: &mut 
     *value = new_value;
     if old_frame != new_frame as usize {
         let send_value = new_frame / animation_frames as f32;
-        match on_drag {
-            OnDragBehavior::Osc1Freq => audio_channel.send(AudioMessage::Osc1Freq(send_value)).unwrap(),
+        let result = match on_drag {
+            // Osc1
+            OnDragBehavior::Osc1Freq => audio_channel.send(AudioMessage::Osc1Freq(send_value)),
             OnDragBehavior::Osc1Shape => {
                 let shape = match (send_value * 4.0) as usize {
                     0 => WaveShape::Sine,
@@ -122,9 +153,75 @@ fn on_drag_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, value: &mut 
                     2 => WaveShape::Square,
                     _ => WaveShape::Saw,
                 };
-                audio_channel.send(AudioMessage::Osc1Shape(shape)).unwrap();
-            }
-            OnDragBehavior::DelayTime => audio_channel.send(AudioMessage::DelayTime(send_value)).unwrap(),
-        }
+                audio_channel.send(AudioMessage::Osc1Shape(shape))
+            },
+            OnDragBehavior::Osc1Level => audio_channel.send(AudioMessage::Osc1Level(send_value)),
+            OnDragBehavior::Osc1Phase => audio_channel.send(AudioMessage::Osc1Phase(send_value)),
+            // Osc2
+            OnDragBehavior::Osc2Freq => audio_channel.send(AudioMessage::Osc2Freq(send_value)),
+            OnDragBehavior::Osc2Level => audio_channel.send(AudioMessage::Osc2Level(send_value)),
+            OnDragBehavior::Osc2Phase => audio_channel.send(AudioMessage::Osc2Phase(send_value)),
+
+            // Lfo1
+            OnDragBehavior::Lfo1Freq => audio_channel.send(AudioMessage::Lfo1Freq(send_value)),
+            OnDragBehavior::Lfo1Shape => {
+                let shape = match (send_value * 4.0) as usize {
+                    0 => WaveShape::Sine,
+                    1 => WaveShape::Triangle,
+                    2 => WaveShape::Square,
+                    _ => WaveShape::Saw,
+                };
+                audio_channel.send(AudioMessage::Lfo1Shape(shape))
+            },
+            // Lfo2
+            OnDragBehavior::Lfo2Freq => audio_channel.send(AudioMessage::Lfo2Freq(send_value)),
+            OnDragBehavior::Lfo2Shape => {
+                let shape = match (send_value * 4.0) as usize {
+                    0 => WaveShape::Sine,
+                    1 => WaveShape::Triangle,
+                    2 => WaveShape::Square,
+                    _ => WaveShape::Saw,
+                };
+                audio_channel.send(AudioMessage::Lfo2Shape(shape))
+            },
+
+            // Filter1
+            OnDragBehavior::Filter1Freq => audio_channel.send(AudioMessage::Filter1Freq(send_value)),
+            // Filter2
+            OnDragBehavior::Filter2Freq => audio_channel.send(AudioMessage::Filter2Freq(send_value)),
+
+            // Env1
+            OnDragBehavior::Env1Attack => audio_channel.send(AudioMessage::Env1Attack(send_value)),
+            OnDragBehavior::Env1Decay => audio_channel.send(AudioMessage::Env1Decay(send_value)),
+            OnDragBehavior::Env1Sustain => audio_channel.send(AudioMessage::Env1Sustain(send_value)),
+            OnDragBehavior::Env1Release => audio_channel.send(AudioMessage::Env1Release(send_value)),
+            // Env2
+            OnDragBehavior::Env2Attack => audio_channel.send(AudioMessage::Env2Attack(send_value)),
+            OnDragBehavior::Env2Decay => audio_channel.send(AudioMessage::Env2Decay(send_value)),
+            OnDragBehavior::Env2Sustain => audio_channel.send(AudioMessage::Env2Sustain(send_value)),
+            OnDragBehavior::Env2Release => audio_channel.send(AudioMessage::Env2Release(send_value)),
+            // Env3
+            OnDragBehavior::Env3Attack => audio_channel.send(AudioMessage::Env3Attack(send_value)),
+            OnDragBehavior::Env3Decay => audio_channel.send(AudioMessage::Env3Decay(send_value)),
+            OnDragBehavior::Env3Sustain => audio_channel.send(AudioMessage::Env3Sustain(send_value)),
+            OnDragBehavior::Env3Release => audio_channel.send(AudioMessage::Env3Release(send_value)),
+
+            // Effects
+            // Distortion
+            OnDragBehavior::EffectDistDrive => audio_channel.send(AudioMessage::DistDrive(send_value)),
+            OnDragBehavior::EffectDistWet => audio_channel.send(AudioMessage::DistWet(send_value)),
+            // Delay
+            OnDragBehavior::EffectDelayFeedback => audio_channel.send(AudioMessage::DelayFeedback(send_value)),
+            OnDragBehavior::EffectDelayTime => audio_channel.send(AudioMessage::DelayTime(send_value)),
+            OnDragBehavior::EffectDelayWet => audio_channel.send(AudioMessage::DelayWet(send_value)),
+            // Reverb
+            OnDragBehavior::EffectReverbTime => audio_channel.send(AudioMessage::ReverbTime(send_value)),
+            OnDragBehavior::EffectReverbWet => audio_channel.send(AudioMessage::ReverbWet(send_value)),
+
+            // Master
+            OnDragBehavior::MasterGain => audio_channel.send(AudioMessage::MasterGain(send_value)),
+        };
+
+        result.unwrap();
     }
 }

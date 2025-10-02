@@ -28,7 +28,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyFilter <INPUT_O
         }
     }
 
-    pub fn update_freq_value(&mut self, freq: f32) {
+    pub fn set_freq_value(&mut self, freq: f32) {
         self.frequency = freq;
     }
 

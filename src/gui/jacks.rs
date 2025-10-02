@@ -168,7 +168,6 @@ pub fn on_mouse_move_system(audio_channel: &mut mpsc::Sender<AudioMessage>, jack
         let old_frame = ((animation_frames - 1) as f32 * (cable.value() / 2.0 + 0.5)) as usize;
         let new_frame = (animation_frames - 1) as f32 * (new_value / 2.0 + 0.5);
 
-        println!("val: {}, old: {}, new: {}", new_value, old_frame, new_frame);
         cable.set_value(new_value);
         if old_frame != new_frame as usize {
             audio_channel.send(AudioMessage::CableAttenuation(cable_index, new_value)).unwrap();

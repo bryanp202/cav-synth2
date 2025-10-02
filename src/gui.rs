@@ -28,15 +28,19 @@ use sdl3::render::{Canvas, FPoint, FRect, Texture, TextureCreator};
 use crate::audio::{AudioMessage, InputJack, OutputJack};
 use crate::common::ComponentVec;
 use crate::gui::animation::Animation;
-use crate::gui::drawable::Drawables;
+use crate::gui::drawable::{Drawables, OnReleaseBehavior};
 use crate::gui::jacks::JackData;
 use crate::gui::toggleable::Toggleables;
 use crate::gui::dragable::{DragType, Dragables, OnDragBehavior};
 
-const JACK_INPUT_TEXTURE: usize = 4;
-const JACK_OUTPUT_TEXTURE: usize = 5;
-const CABLE_SLIDER_TEXTURE: usize = 7;
-const TEXTURE_COUNT: usize = 8;
+const FACEPLATE_TEXTURE: usize = 0;
+const JACK_INPUT_TEXTURE: usize = 1;
+const JACK_OUTPUT_TEXTURE: usize = 2;
+const KNOB_128_TEXTURE: usize = 3;
+const KNOB_4_TEXTURE: usize = 4;
+const METER_MASTER_TEXTURE: usize = 5;
+const CABLE_SLIDER_TEXTURE: usize = 6;
+const TEXTURE_COUNT: usize = 7;
 
 pub struct Gui<'a> {
     audio_channel: Sender<AudioMessage>,
@@ -75,135 +79,15 @@ impl <'a> Gui <'a> {
     }
 
     pub fn init(&mut self) {
-        self.load_texture(include_bytes!("../assets/knob_basic128.png"));
-        self.load_texture(include_bytes!("../assets/switch_two_state.png"));
-        self.load_texture(include_bytes!("../assets/switch_three_state.png"));
-        self.load_texture(include_bytes!("../assets/slider_detailed.png"));
+        self.load_texture(include_bytes!("../assets/faceplate.png"));
         self.load_texture(include_bytes!("../assets/jack_input.png"));
         self.load_texture(include_bytes!("../assets/jack_output.png"));
+        self.load_texture(include_bytes!("../assets/knob_basic128.png"));
         self.load_texture(include_bytes!("../assets/knob_basic4.png"));
-        self.load_texture(include_bytes!("../assets/slider_cable.png"));
+        self.load_texture(include_bytes!("../assets/slider_128_35x90.png"));
+        self.load_texture(include_bytes!("../assets/meter_master31_35x120.png"));
 
-
-        for x in 0..10 {
-            let x = x as f32;
-            for y in 0..5 {
-                let y = y as f32;
-                self.dragables.spawn(
-                    FRect::new(x * 64.0, y * 64.0, 64.0, 64.0), 
-                    0.5, 
-                    (DragType::HORIZONTAL, OnDragBehavior::Osc1Freq),
-                    dragable::OnDoubleClickBehavior::SetTo(0.5),
-                    Animation::new(0, 128, 64.0, 64.0)
-                ).unwrap();
-                let switch_w = self.textures[1].width() as f32;
-                let switch_h = switch_w;
-                self.toggleables.spawn(
-                    FRect::new(640.0 + x * switch_w, y * switch_h, switch_w, switch_h), 
-                    toggleable::OnToggleBehavior::None, 
-                    0,
-                    Animation::new(1, 2, switch_w, switch_h)
-                ).unwrap();
-            }
-            for y in 5..10 {
-                let y = y as f32;
-                self.dragables.spawn(
-                    FRect::new(x * 64.0, y * 64.0, 64.0, 64.0), 
-                    0.5, 
-                    (DragType::VERTICAL, OnDragBehavior::Osc1Freq),
-                    dragable::OnDoubleClickBehavior::SetTo(0.9),
-                    Animation::new(0, 128, 64.0, 64.0)
-                ).unwrap();
-                let switch_w = self.textures[2].width() as f32;
-                let switch_h = switch_w;
-                self.toggleables.spawn(
-                    FRect::new(640.0 + x * switch_w, y * switch_h, switch_w, switch_h), 
-                    toggleable::OnToggleBehavior::None, 
-                    0,
-                    Animation::new(2, 3, switch_w, switch_h)
-                ).unwrap();
-                let slider_w = self.textures[3].width() as f32;
-                let slider_h = self.textures[3].height() as f32 / 128.0;
-                self.dragables.spawn(
-                    FRect::new(1000.0 + x * slider_w, (y-5.0) * slider_h, slider_w, slider_h), 
-                    0.5,
-                    (DragType::VERTICAL, OnDragBehavior::DelayTime),
-                    dragable::OnDoubleClickBehavior::SetTo(0.5),
-                    Animation::new(3, 128, slider_w, slider_h)
-                ).unwrap();
-            }
-        }
-
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*0.0, 800.0, 32.0, 32.0),
-            InputJack::Osc1Freq,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*1.0, 800.0, 32.0, 32.0),
-            InputJack::Osc1Phase,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*2.0, 800.0, 32.0, 32.0),
-            InputJack::Osc1Level,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*3.0, 800.0, 32.0, 32.0),
-            InputJack::Osc1Amp,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*0.0, 800.0 + 64.0, 32.0, 32.0),
-            InputJack::Osc2Freq,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*1.0, 800.0 + 64.0, 32.0, 32.0),
-            InputJack::Osc2Phase,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*2.0, 800.0 + 64.0, 32.0, 32.0),
-            InputJack::Osc2Level,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*3.0, 800.0 + 64.0, 32.0, 32.0),
-            InputJack::Osc2Amp,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*0.0, 800.0 + 64.0*2.0, 32.0, 32.0),
-            InputJack::Env1Vel,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*1.0, 800.0 + 64.0*2.0, 32.0, 32.0),
-            InputJack::Env1Gate,
-        ).unwrap();
-        self.jacks.spawn_input(
-            FRect::new(1000.0 + 64.0*0.0, 800.0 + 64.0*3.0, 32.0, 32.0),
-            InputJack::EffectsChain,
-        ).unwrap();
-
-        self.jacks.spawn_output(
-            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*0.0, 32.0, 32.0),
-            OutputJack::MidiGate,
-        ).unwrap();
-        self.jacks.spawn_output(
-            FRect::new(200.0 + 64.0*1.0, 800.0 + 64.0*0.0, 32.0, 32.0),
-            OutputJack::MidiNote,
-        ).unwrap();
-        self.jacks.spawn_output(
-            FRect::new(200.0 + 64.0*2.0, 800.0 + 64.0*0.0, 32.0, 32.0),
-            OutputJack::MidiVelocity,
-        ).unwrap();
-        self.jacks.spawn_output(
-            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*1.0, 32.0, 32.0),
-            OutputJack::Env1Value,
-        ).unwrap();
-        self.jacks.spawn_output(
-            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*2.0, 32.0, 32.0),
-            OutputJack::Osc1Value,
-        ).unwrap();
-        self.jacks.spawn_output(
-            FRect::new(200.0 + 64.0*0.0, 800.0 + 64.0*3.0, 32.0, 32.0),
-            OutputJack::Osc2Value,
-        ).unwrap();
-
+        // OSC 1
         self.dragables.spawn(
             FRect { x: 1200.0, y: 700.0, w: 64.0, h: 64.0 },
             0.0,
@@ -211,13 +95,13 @@ impl <'a> Gui <'a> {
             dragable::OnDoubleClickBehavior::SetTo(0.0),
             Animation::new(self.textures.len() - 2, 4, 64.0, 64.0)
         ).unwrap();
-        self.drawables.spawn(FRect { x: 1300.0, y: 500.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
-        self.drawables.spawn(FRect { x: 1300.0, y: 100.0, w: 256.0, h: 200.0 }, drawable::OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
+
+        // OSC 2
+        self.drawables.spawn(FRect::new(502.0, 16.0, 256.0, 256.0), OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
     }
 
     pub fn render(&mut self, canvas: &mut Canvas<Window>) -> Result<(), sdl3::Error> {
-        canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
-        canvas.clear();
+        canvas.copy(&self.textures[FACEPLATE_TEXTURE], None, None)?;
         toggleable::render_system(canvas, &self.textures, &self.toggleables)?;
         dragable::render_system(canvas, &self.textures, &self.dragables)?;
         drawable::render_system(canvas, &self.drawables)?;
