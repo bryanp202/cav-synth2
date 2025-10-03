@@ -32,20 +32,19 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
     pub fn new() -> Self {
         Self {
             envelopes: [EnvelopeMetaData::default(); MAX_POLY_COUNT],
-            attack: 0.015,
-            decay: 2.6,
-            release: 0.5,
-            sustain: 1.0,
+            attack: 0.1,
+            decay: 5.0,
+            release: 2.0,
+            sustain: 0.0,
         }
     }
 
     pub fn set_attack_value(&mut self, attack: f32) {
-        self.attack = attack;
+        self.attack = attack * 10.0;
     }
 
     pub fn set_decay_value(&mut self, decay: f32) {
-        self.decay = decay;
-        println!("decay: {}", decay);
+        self.decay = decay * 10.0;
     }
 
     pub fn set_sustain_value(&mut self, sustain: f32) {
@@ -53,7 +52,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
     }
 
     pub fn set_release_value(&mut self, release: f32) {
-        self.release = release;
+        self.release = release * 10.0;
     }
 
     pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32]) {
