@@ -68,7 +68,7 @@ pub enum OutputJack {
     Osc1Value = OSC1_OUTPUT_OFFSET + analog::OUT_VALUE,
     Osc2Value = OSC2_OUTPUT_OFFSET + wavetable::OUT_VALUE,
     Filter1Value = FILTER1_OUTPUT_OFFSET + filter::VALUE_OUTPUT,
-    Fitler2Value = FILTER2_OUTPUT_OFFSET + filter::VALUE_OUTPUT,
+    Filter2Value = FILTER2_OUTPUT_OFFSET + filter::VALUE_OUTPUT,
     Env1Value = ENV1_OUTPUT_OFFSET + envelope::OUT_VALUE,
     Env2Value = ENV2_OUTPUT_OFFSET + envelope::OUT_VALUE,
     Env3Value = ENV3_OUTPUT_OFFSET + envelope::OUT_VALUE,

@@ -45,6 +45,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
 
     pub fn set_decay_value(&mut self, decay: f32) {
         self.decay = decay;
+        println!("decay: {}", decay);
     }
 
     pub fn set_sustain_value(&mut self, sustain: f32) {

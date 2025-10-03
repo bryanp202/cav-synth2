@@ -103,6 +103,7 @@ impl <'a> Gui <'a> {
         self.init_midi();
         self.init_lfos();
         self.init_envs();
+        self.init_filters();
         self.init_effects();
 
         // OSC 2
@@ -373,7 +374,7 @@ impl <'a> Gui <'a> {
         self.dragables.spawn(
             FRect::new(49.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
             0.0,
-            (DragType::VERTICAL, OnDragBehavior::Env1Release),
+            (DragType::VERTICAL, OnDragBehavior::Env1Decay),
             dragable::OnDoubleClickBehavior::SetTo(0.0),
             SLIDER_128_ANIMATION,
         ).unwrap();
@@ -429,7 +430,7 @@ impl <'a> Gui <'a> {
         self.dragables.spawn(
             FRect::new(224.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
             0.0,
-            (DragType::VERTICAL, OnDragBehavior::Env2Release),
+            (DragType::VERTICAL, OnDragBehavior::Env2Decay),
             dragable::OnDoubleClickBehavior::SetTo(0.0),
             SLIDER_128_ANIMATION,
         ).unwrap();
@@ -485,7 +486,7 @@ impl <'a> Gui <'a> {
         self.dragables.spawn(
             FRect::new(396.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
             0.0,
-            (DragType::VERTICAL, OnDragBehavior::Env3Release),
+            (DragType::VERTICAL, OnDragBehavior::Env3Decay),
             dragable::OnDoubleClickBehavior::SetTo(0.0),
             SLIDER_128_ANIMATION,
         ).unwrap();
@@ -519,11 +520,121 @@ impl <'a> Gui <'a> {
         ).unwrap();
     }
 
+    fn init_filters(&mut self) {
+        // Knobs
+        self.dragables.spawn(
+            FRect::new(1144.0, 326.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.7,
+            (DragType::VERTICAL, OnDragBehavior::Filter1Freq),
+            dragable::OnDoubleClickBehavior::SetTo(0.7),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(1144.0, 414.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.7,
+            (DragType::VERTICAL, OnDragBehavior::Filter2Freq),
+            dragable::OnDoubleClickBehavior::SetTo(0.7),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+
+        // Inputs
+        self.jacks.spawn_input(
+            FRect::new(1010.0, 344.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Filter1Cutoff,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(1010.0, 428.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Filter2Cutoff,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(936.0, 344.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Filter1Value,
+        ).unwrap();
+        self.jacks.spawn_input(
+            FRect::new(936.0, 428.0, JACK_WIDTH, JACK_HEIGHT),
+            InputJack::Filter2Value,
+        ).unwrap();
+
+        // Outputs
+        self.jacks.spawn_output(
+            FRect::new(864.0, 344.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Filter1Value,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(864.0, 428.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Filter2Value,
+        ).unwrap();
+    }
+
     fn init_effects(&mut self) {
         // Input
         self.jacks.spawn_input(
             FRect::new(671.0, 705.0, JACK_WIDTH, JACK_HEIGHT),
             InputJack::EffectsChain,
+        ).unwrap();
+
+        // Dist
+        self.dragables.spawn(
+            FRect::new(746.0, 586.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::EffectDistDrive),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(746.0, 676.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::EffectDistWet),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+
+        // Delay
+        self.dragables.spawn(
+            FRect::new(888.0, 559.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::EffectDelayFeedback),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(888.0, 628.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.5,
+            (DragType::VERTICAL, OnDragBehavior::EffectDelayTime),
+            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(888.0, 700.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::EffectDelayWet),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+
+        // Reverb
+        self.dragables.spawn(
+            FRect::new(1025.0, 586.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::EffectReverbTime),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+        self.dragables.spawn(
+            FRect::new(1025.0, 676.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.0,
+            (DragType::VERTICAL, OnDragBehavior::EffectReverbWet),
+            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            KNOB_128_ANIMATION,
+        ).unwrap();
+
+        // Master
+        self.dragables.spawn(
+            FRect::new(1160.0, 700.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
+            0.7,
+            (DragType::VERTICAL, OnDragBehavior::MasterGain),
+            dragable::OnDoubleClickBehavior::SetTo(0.7),
+            KNOB_128_ANIMATION,
         ).unwrap();
     }
 }

@@ -23,7 +23,7 @@ pub struct PolyFilter<const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> {
 impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyFilter <INPUT_OFFSET, OUTPUT_OFFSET> {
     pub fn new() -> Self {
         Self {
-            frequency: 0.4,
+            frequency: 0.7,
             buffers: [BufferData::default(); MAX_POLY_COUNT],
         }
     }

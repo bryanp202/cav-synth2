@@ -15,12 +15,12 @@ impl EffectsChain {
             distortion: Distortion::new(),
             delay: Delay::new(),
             reverb: Reverb::new(),
-            master_gain: 1.0,
+            master_gain: 0.7,
         }
     }
 
     pub fn set_dist_drive(&mut self, drive: f32) {
-        self.distortion.drive = drive;
+        self.distortion.drive = 1.0 + drive * 5.0;
     }
 
     pub fn set_dist_wet(&mut self, wet: f32) {
@@ -76,7 +76,7 @@ impl Distortion {
 
     fn render(&self, input: f32) -> f32 {
         let drive_value = self.drive * input;
-        let wet_value = drive_value.powf(3.0);
+        let wet_value = drive_value.signum() * (1.0 - (-(drive_value.abs())).exp());
         let out_value = input + (wet_value - input) * self.wet;
         out_value
     }
