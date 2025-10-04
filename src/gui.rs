@@ -249,7 +249,7 @@ impl <'a> Gui <'a> {
         self.dragables.spawn(
             FRect::new(1100.0, 158.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
             0.0,
-            (DragType::VERTICAL, OnDragBehavior::Osc2Level),
+            (DragType::VERTICAL, OnDragBehavior::Osc2Phase),
             dragable::OnDoubleClickBehavior::SetTo(0.0),
             KNOB_128_ANIMATION,
         ).unwrap();
