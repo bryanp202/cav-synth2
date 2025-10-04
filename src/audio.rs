@@ -10,7 +10,8 @@ use cpal::{Device, FromSample, Host, SizedSample, StreamConfig, SupportedStreamC
 use crate::audio::component::cable::Cables;
 use crate::audio::component::effects::EffectsChain;
 use crate::audio::component::filter::PolyFilter;
-use crate::audio::component::{analog, envelope, filter};
+use crate::audio::component::lfo::PolyLfo;
+use crate::audio::component::{analog, envelope, filter, lfo};
 use crate::audio::component::wavetable::{self, PolyWavetable};
 
 use crate::audio::midi::Midi;
@@ -72,8 +73,8 @@ pub enum OutputJack {
     Env1Value = ENV1_OUTPUT_OFFSET + envelope::OUT_VALUE,
     Env2Value = ENV2_OUTPUT_OFFSET + envelope::OUT_VALUE,
     Env3Value = ENV3_OUTPUT_OFFSET + envelope::OUT_VALUE,
-    //Lfo1Value = LFO1_OUTPUT_OFFSET + lfo::OUT_VALUE,
-    //Lfo2Value = LFO2_OUTPUT_OFFSET + lfo::OUT_VALUE,
+    Lfo1Value = LFO1_OUTPUT_OFFSET + lfo::OUT_VALUE,
+    Lfo2Value = LFO2_OUTPUT_OFFSET + lfo::OUT_VALUE,
 }
 
 #[derive(Debug)]
@@ -206,7 +207,9 @@ const ENV2_INPUT_OFFSET: usize = ENV1_INPUT_OFFSET + envelope::TOTAL_INPUT_COUNT
 const ENV3_INPUT_OFFSET: usize = ENV2_INPUT_OFFSET + envelope::TOTAL_INPUT_COUNT;
 const FILTER1_INPUT_OFFSET: usize = ENV3_INPUT_OFFSET + envelope::TOTAL_INPUT_COUNT;
 const FILTER2_INPUT_OFFSET: usize = FILTER1_INPUT_OFFSET + filter::TOTAL_INPUT_COUNT;
-const TOTAL_INPUT_COUNT: usize = FILTER2_INPUT_OFFSET + filter::TOTAL_INPUT_COUNT;
+const LFO1_INPUT_OFFSET: usize = FILTER2_INPUT_OFFSET + filter::TOTAL_INPUT_COUNT;
+const LFO2_INPUT_OFFSET: usize = LFO1_INPUT_OFFSET + lfo::TOTAL_INPUT_COUNT;
+const TOTAL_INPUT_COUNT: usize = LFO2_INPUT_OFFSET + lfo::TOTAL_INPUT_COUNT;
 
 const MIDI_OUTPUT_OFFSET: usize = 0;
 const OSC1_OUTPUT_OFFSET: usize =  MIDI_OUTPUT_OFFSET + midi::TOTAL_OUTPUT_COUNT;
@@ -216,7 +219,9 @@ const ENV2_OUTPUT_OFFSET: usize = ENV1_OUTPUT_OFFSET + envelope::TOTAL_OUTPUT_CO
 const ENV3_OUTPUT_OFFSET: usize = ENV2_OUTPUT_OFFSET + envelope::TOTAL_OUTPUT_COUNT;
 const FILTER1_OUTPUT_OFFSET: usize = ENV3_OUTPUT_OFFSET + envelope::TOTAL_OUTPUT_COUNT;
 const FILTER2_OUTPUT_OFFSET: usize = FILTER1_OUTPUT_OFFSET + filter::TOTAL_OUTPUT_COUNT;
-const TOTAL_OUTPUT_COUNT: usize = FILTER2_OUTPUT_OFFSET + filter::TOTAL_OUTPUT_COUNT;
+const LFO1_OUTPUT_OFFSET: usize = FILTER2_OUTPUT_OFFSET + filter::TOTAL_OUTPUT_COUNT;
+const LFO2_OUTPUT_OFFSET: usize = LFO1_OUTPUT_OFFSET + lfo::TOTAL_OUTPUT_COUNT;
+const TOTAL_OUTPUT_COUNT: usize = LFO2_OUTPUT_OFFSET + lfo::TOTAL_OUTPUT_COUNT;
 
 struct AudioState {
     receiver: mpsc::Receiver<AudioMessage>,
@@ -231,6 +236,8 @@ struct AudioState {
     env3: PolyEnvelope<ENV3_INPUT_OFFSET, ENV3_OUTPUT_OFFSET>,
     filter1: PolyFilter<FILTER1_INPUT_OFFSET, FILTER1_OUTPUT_OFFSET>,
     filter2: PolyFilter<FILTER2_INPUT_OFFSET, FILTER2_OUTPUT_OFFSET>,
+    lfo1: PolyLfo<LFO1_INPUT_OFFSET, LFO1_OUTPUT_OFFSET>,
+    lfo2: PolyLfo<LFO2_INPUT_OFFSET, LFO2_OUTPUT_OFFSET>,
     effects_chain: EffectsChain,
     cables: Cables<MAX_CABLES>,
 }
@@ -250,6 +257,8 @@ impl AudioState {
             env3: PolyEnvelope::new(),
             filter1: PolyFilter::new(),
             filter2: PolyFilter::new(),
+            lfo1: PolyLfo::new(),
+            lfo2: PolyLfo::new(),
             effects_chain: EffectsChain::new(sample_rate),
             cables: Cables::new(),
         };
@@ -273,6 +282,8 @@ impl AudioState {
         self.env3.render(&self.inputs, &mut self.outputs);
         self.filter1.render(&self.inputs, &mut self.outputs, self.sample_rate as f32);
         self.filter2.render(&self.inputs, &mut self.outputs, self.sample_rate as f32);
+        self.lfo1.render(&self.inputs, &mut self.outputs, self.sample_rate);
+        self.lfo2.render(&self.inputs, &mut self.outputs, self.sample_rate);
         self.cables.run_cables(&mut self.inputs, &self.outputs);
         self.effects_chain.render(unsafe { self.inputs[0..MAX_POLY_COUNT].try_into().unwrap_unchecked() })
     }
@@ -291,11 +302,11 @@ impl AudioState {
                 AudioMessage::Osc2Level(level) => self.osc2.set_level_value(level),
 
                 // Lfo1
-                AudioMessage::Lfo1Freq(freq) => {},
-                AudioMessage::Lfo1Shape(shape) => {},
+                AudioMessage::Lfo1Freq(freq) => self.lfo1.set_freq_value(freq),
+                AudioMessage::Lfo1Shape(shape) => self.lfo1.set_shape(shape),
                 // Lfo2
-                AudioMessage::Lfo2Freq(freq) => {},
-                AudioMessage::Lfo2Shape(shape) => {},
+                AudioMessage::Lfo2Freq(freq) => self.lfo2.set_freq_value(freq),
+                AudioMessage::Lfo2Shape(shape) => self.lfo2.set_shape(shape),
 
                 // Filter1
                 AudioMessage::Filter1Freq(freq) => self.filter1.set_freq_value(freq),

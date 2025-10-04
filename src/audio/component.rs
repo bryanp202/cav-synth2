@@ -3,6 +3,7 @@ pub mod analog;
 pub mod cable;
 pub mod effects;
 pub mod filter;
+pub mod lfo;
 pub mod wavetable;
 
 #[derive(Clone, Copy, Debug)]

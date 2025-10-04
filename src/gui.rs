@@ -295,6 +295,8 @@ impl <'a> Gui <'a> {
     }
 
     fn init_lfos(&mut self) {
+        let freq_start_value: f32 = (0.9f32 / 99.9).powf(1.0 / 3.0);
+
         // Knobs
         self.dragables.spawn(
             FRect::new(64.0, 312.0, KNOB_4_ANIMATION.width(), KNOB_4_ANIMATION.height()),
@@ -312,28 +314,28 @@ impl <'a> Gui <'a> {
         ).unwrap();
         self.dragables.spawn(
             FRect::new(170.0, 312.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
-            0.5,
+            freq_start_value,
             (DragType::VERTICAL, OnDragBehavior::Lfo1Freq),
-            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            dragable::OnDoubleClickBehavior::SetTo(freq_start_value),
             KNOB_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(170.0, 409.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
-            0.5,
+            freq_start_value,
             (DragType::VERTICAL, OnDragBehavior::Lfo2Freq),
-            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            dragable::OnDoubleClickBehavior::SetTo(freq_start_value),
             KNOB_128_ANIMATION,
         ).unwrap();
 
-        // // Outputs
-        // self.jacks.spawn_output(
-        //     FRect::new(284.0, 328.0, JACK_WIDTH, JACK_HEIGHT),
-        //     OutputJack::Lfo1Value,
-        // ).unwrap();
-        // self.jacks.spawn_output(
-        //     FRect::new(364.0, 426.0, JACK_WIDTH, JACK_HEIGHT),
-        //     OutputJack::Lfo2Value,
-        // ).unwrap();
+        // Outputs
+        self.jacks.spawn_output(
+            FRect::new(284.0, 328.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Lfo1Value,
+        ).unwrap();
+        self.jacks.spawn_output(
+            FRect::new(364.0, 426.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::Lfo2Value,
+        ).unwrap();
     }
 
     fn init_envs(&mut self) {
