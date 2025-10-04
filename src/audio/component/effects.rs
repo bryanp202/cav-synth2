@@ -48,6 +48,11 @@ impl EffectsChain {
 
     pub fn set_reverb_spread(&mut self, spread: f32) {
         self.reverb.stereo_spread = (100 as f32 * spread) as usize;
+        self.set_reverb_wet(1.0 - self.reverb.dry);
+    }
+
+    pub fn set_reverb_space(&mut self, space: f32) {
+        self.reverb.space = 0.74 + 0.24 * space;
     }
 
     pub fn set_reverb_wet(&mut self, wet: f32) {
@@ -134,6 +139,7 @@ struct Reverb {
     damp: f32,
     width: f32,
     stereo_spread: usize,
+    space: f32,
 
     lfo_current_phase: f64,
     lfo_phase_step: f64,
@@ -150,6 +156,7 @@ impl Reverb {
             wet2: 0.0,
             dry: 1.0,
             width: 1.0,
+            space: COMB_FB,
             damp: COMB_DAMP,
             stereo_spread: INIT_SPREAD,
             combs: std::array::from_fn(|i| (VecDeque::with_capacity(COMB_N[i] + MOD_RANGE), VecDeque::with_capacity(COMB_N[i] + MOD_RANGE))),
@@ -171,8 +178,8 @@ impl Reverb {
         self.lfo_current_phase = (self.lfo_current_phase + self.lfo_phase_step) % 1.0;
 
         for (i, (comb_l, comb_r)) in self.combs.iter_mut().enumerate() {
-            out_l += comb_process(input_scaled, comb_l, &mut self.comb_state[i].0, COMB_FB, COMB_N[i], mod_offset, self.damp);
-            out_r += comb_process(input_scaled, comb_r, &mut self.comb_state[i].1, COMB_FB, COMB_N[i] + self.stereo_spread, mod_offset, self.damp);
+            out_l += comb_process(input_scaled, comb_l, &mut self.comb_state[i].0, self.space, COMB_N[i], mod_offset, self.damp);
+            out_r += comb_process(input_scaled, comb_r, &mut self.comb_state[i].1, self.space, COMB_N[i] + self.stereo_spread, mod_offset, self.damp);
         }
 
         for (i, (allpass_l, allpass_r)) in self.allpass.iter_mut().enumerate() {

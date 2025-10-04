@@ -125,6 +125,7 @@ pub enum AudioMessage {
     ReverbDamp(f32),
     ReverbSpread(f32),
     ReverbWet(f32),
+    ReverbSpace(f32),
     // Master
     MasterGain(f32),
     // Midi
@@ -341,6 +342,7 @@ impl AudioState {
                 AudioMessage::ReverbDamp(damp) => self.effects_chain.set_reverb_damp(damp),
                 AudioMessage::ReverbSpread(spread) => self.effects_chain.set_reverb_spread(spread),
                 AudioMessage::ReverbWet(wet) => self.effects_chain.set_reverb_wet(wet),
+                AudioMessage::ReverbSpace(space) => self.effects_chain.set_reverb_space(space),
 
                 // Master
                 AudioMessage::MasterGain(gain) => self.effects_chain.set_master_gain(gain),
