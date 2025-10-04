@@ -26,7 +26,6 @@ impl <T, const MAX: usize> ComponentVec<T, MAX> {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn remove(&mut self, index: usize) -> T {
         if index >= self.count {
             panic!("Out of bounds remove");

@@ -102,11 +102,12 @@ fn on_release_behavior(
             });
 
             let mut new_wavetable: Wavetable = [0.0; WAVETABLE_FRAME_LENGTH * 8];
-            new_wavetable[0..WAVETABLE_FRAME_LENGTH].copy_from_slice(&default_variation);
 
             let mut freq_domain = [Complex::zero(); PARTIAL_COUNT];
             r2c.process(&mut default_variation, &mut freq_domain).unwrap();
 
+            freq_domain[0] = Complex::zero();
+            c2r.process(&mut freq_domain.clone(), &mut new_wavetable[0..WAVETABLE_FRAME_LENGTH]).unwrap();
             freq_domain[PARTIAL_COUNT / 2..].fill(Complex::zero());
             c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH..WAVETABLE_FRAME_LENGTH*2]).unwrap();
             freq_domain[PARTIAL_COUNT / 4 .. PARTIAL_COUNT / 2].fill(Complex::zero());
@@ -122,7 +123,8 @@ fn on_release_behavior(
             freq_domain[PARTIAL_COUNT / 128 .. PARTIAL_COUNT / 64].fill(Complex::zero());
             c2r.process(&mut freq_domain.clone(), &mut new_wavetable[WAVETABLE_FRAME_LENGTH*7..]).unwrap();
 
-            new_wavetable[WAVETABLE_FRAME_LENGTH..].iter_mut().for_each(|x| *x /= WAVETABLE_FRAME_LENGTH as f32);
+            let max = new_wavetable.into_iter().reduce(f32::max).unwrap_or(0.0).abs();
+            new_wavetable.iter_mut().for_each(|x| *x /= max);
             
             audio_channel.send(AudioMessage::Osc2WavetableUpdate(Arc::new(new_wavetable))).unwrap();
         },
