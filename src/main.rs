@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 #![feature(maybe_uninit_slice)]
 mod audio;
 mod gui;

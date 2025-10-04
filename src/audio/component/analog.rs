@@ -1,4 +1,5 @@
 use crate::audio::MAX_POLY_COUNT;
+use super::WaveShape;
 
 pub const LEVEL_INPUT: usize = 0 * MAX_POLY_COUNT;
 pub const FREQUENCY_INPUT: usize = 1 * MAX_POLY_COUNT;
@@ -8,20 +9,6 @@ pub const TOTAL_INPUT_COUNT: usize = 4 * MAX_POLY_COUNT;
 
 pub const OUT_VALUE: usize = 0 * MAX_POLY_COUNT;
 pub const TOTAL_OUTPUT_COUNT: usize = 1 * MAX_POLY_COUNT;
-
-#[derive(Clone, Copy, Debug)]
-pub enum WaveShape {
-    Saw,
-    Sine,
-    Square,
-    Triangle,
-}
-
-impl Default for WaveShape {
-    fn default() -> Self {
-        Self::Sine
-    }
-}
 
 pub struct PolyAnalog<const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> {
     shape: WaveShape,

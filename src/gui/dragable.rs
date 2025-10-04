@@ -46,7 +46,8 @@ pub enum OnDragBehavior {
     EffectDelayFeedback,
     EffectDelayTime,
     EffectDelayWet,
-    EffectReverbTime,
+    EffectReverbSpread,
+    EffectReverbDamp,
     EffectReverbWet,
     MasterGain,
 }
@@ -215,7 +216,8 @@ fn on_drag_behavior(audio_channel: &mut mpsc::Sender<AudioMessage>, value: &mut 
             OnDragBehavior::EffectDelayTime => audio_channel.send(AudioMessage::DelayTime(send_value)),
             OnDragBehavior::EffectDelayWet => audio_channel.send(AudioMessage::DelayWet(send_value)),
             // Reverb
-            OnDragBehavior::EffectReverbTime => audio_channel.send(AudioMessage::ReverbTime(send_value)),
+            OnDragBehavior::EffectReverbSpread => audio_channel.send(AudioMessage::ReverbSpread(send_value)),
+            OnDragBehavior::EffectReverbDamp => audio_channel.send(AudioMessage::ReverbDamp(send_value)),
             OnDragBehavior::EffectReverbWet => audio_channel.send(AudioMessage::ReverbWet(send_value)),
 
             // Master

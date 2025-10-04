@@ -1,6 +1,7 @@
+use core::f64;
 use std::collections::VecDeque;
 
-use crate::audio::MAX_POLY_COUNT;
+use crate::audio::{component::filter, MAX_POLY_COUNT};
 
 pub struct EffectsChain {
     distortion: Distortion,
@@ -10,11 +11,11 @@ pub struct EffectsChain {
 }
 
 impl EffectsChain {
-    pub fn new() -> Self {
+    pub fn new(sample_rate: f64) -> Self {
         Self {
             distortion: Distortion::new(),
             delay: Delay::new(),
-            reverb: Reverb::new(),
+            reverb: Reverb::new(sample_rate),
             master_gain: 0.7,
         }
     }
@@ -41,12 +42,18 @@ impl EffectsChain {
         self.delay.wet = wet;
     }
 
-    pub fn set_reverb_time(&mut self, time: f32) {
-        self.reverb.time = time;
+    pub fn set_reverb_damp(&mut self, damp: f32) {
+        self.reverb.damp = damp;
+    }
+
+    pub fn set_reverb_spread(&mut self, spread: f32) {
+        self.reverb.stereo_spread = (100 as f32 * spread) as usize;
     }
 
     pub fn set_reverb_wet(&mut self, wet: f32) {
-        self.reverb.wet = wet;
+        self.reverb.wet1 = wet * (self.reverb.width / 2.0 + 0.5) / 2.0;
+        self.reverb.wet2 = wet * (1.0 - self.reverb.width) / 2.0;
+        self.reverb.dry = 1.0 - wet;
     }
 
     pub fn set_master_gain(&mut self, gain: f32) {
@@ -109,20 +116,94 @@ impl Delay {
     }
 }
 
+const COMB_FB: f32 = 0.98;
+const COMB_DAMP: f32 = 0.10;
+const COMB_N: [usize; 8] = [1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116];
+
+const ALLPASS_FB: f32 = 0.5;
+const ALLPASS_N: [usize; 4] = [225, 556, 441, 341];
+
+const INIT_SPREAD: usize = 23;
+const MOD_RANGE: usize = 20;
+const MOD_FREQ: f64 = 3.0;
+
 struct Reverb {
-    wet: f32,
-    time: f32,
+    wet1: f32,
+    wet2: f32,
+    dry: f32,
+    damp: f32,
+    width: f32,
+    stereo_spread: usize,
+
+    lfo_current_phase: f64,
+    lfo_phase_step: f64,
+
+    combs: [(VecDeque<f32>, VecDeque<f32>); 8],
+    comb_state: [(f32, f32); 8],
+    allpass: [(VecDeque<f32>, VecDeque<f32>); 4],
 }
 
 impl Reverb {
-    fn new() -> Self {
+    fn new(sample_rate: f64) -> Self {
         Self {
-            wet: 0.0,
-            time: 0.0,
+            wet1: 0.0,
+            wet2: 0.0,
+            dry: 1.0,
+            width: 1.0,
+            damp: COMB_DAMP,
+            stereo_spread: INIT_SPREAD,
+            combs: std::array::from_fn(|i| (VecDeque::with_capacity(COMB_N[i] + MOD_RANGE), VecDeque::with_capacity(COMB_N[i] + MOD_RANGE))),
+            comb_state: [(0.0, 0.0); 8],
+            allpass: std::array::from_fn(|i| (VecDeque::with_capacity(ALLPASS_N[i]), VecDeque::with_capacity(ALLPASS_N[i]))),
+
+            lfo_current_phase: 0.0,
+            lfo_phase_step: MOD_FREQ / sample_rate,
         }
     }
 
-    fn render(&self, input: f32) -> (f32, f32) {
-        (input, input)
+    fn render(&mut self, input: f32) -> (f32, f32) {
+        let input_scaled = input / 16.0;
+        let mut out_l = 0.0;
+        let mut out_r = 0.0;
+
+        let lfo_value = 1.0 - 4.0 * (self.lfo_current_phase - (self.lfo_current_phase + 0.5).floor()).abs();
+        let mod_offset = (lfo_value * MOD_RANGE as f64 / 2.0) as isize;
+        self.lfo_current_phase = (self.lfo_current_phase + self.lfo_phase_step) % 1.0;
+
+        for (i, (comb_l, comb_r)) in self.combs.iter_mut().enumerate() {
+            out_l += comb_process(input_scaled, comb_l, &mut self.comb_state[i].0, COMB_FB, COMB_N[i], mod_offset, self.damp);
+            out_r += comb_process(input_scaled, comb_r, &mut self.comb_state[i].1, COMB_FB, COMB_N[i] + self.stereo_spread, mod_offset, self.damp);
+        }
+
+        for (i, (allpass_l, allpass_r)) in self.allpass.iter_mut().enumerate() {
+            out_l = allpass_process(out_l, allpass_l, ALLPASS_FB, ALLPASS_N[i]);
+            out_r = allpass_process(out_r, allpass_r, ALLPASS_FB, ALLPASS_N[i] + self.stereo_spread);
+        }
+
+        let left = out_l * self.wet1 + out_r * self.wet2 + input * self.dry;
+        let right = out_r * self.wet1 + out_l * self.wet2 + input * self.dry;
+
+        (left, right)
     }
+}
+
+#[inline]
+fn comb_process(input: f32, buf: &mut VecDeque<f32>, filter_state: &mut f32, fb: f32, n: usize, mod_offset: isize, d: f32) -> f32 {
+    let y_delayed = buf.get((n as isize - 1 + mod_offset) as usize).unwrap_or(&0.0);
+    *filter_state = (1.0 - d) * y_delayed + d * *filter_state;
+    let output = input + fb * *filter_state;
+    buf.remove(n - 1 + MOD_RANGE / 2);
+    buf.push_front(output);
+
+    output
+}
+
+#[inline]
+fn allpass_process(input: f32, buf: &mut VecDeque<f32>, fb: f32, n: usize) -> f32 {
+    let bufout = buf.remove(n - 1).unwrap_or_default();
+    let output = -fb *input + bufout;
+
+    buf.push_front(input + bufout * fb);
+
+    output
 }

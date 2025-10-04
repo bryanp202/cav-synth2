@@ -337,6 +337,12 @@ impl <'a> Gui <'a> {
     }
 
     fn init_envs(&mut self) {
+        const KNOB_SCALING: f32 = 1.0 / 3.0;
+        let env_start_attack: f32 = (0.02f32 / 10.0).powf(KNOB_SCALING);
+        let env_start_decay: f32 = (2.6f32 / 10.0).powf(KNOB_SCALING);
+        let env_start_sustain: f32 = 0.0;
+        let env_start_release: f32 = (2.0f32 / 10.0).powf(KNOB_SCALING);
+
         // Env1 ------
         // Inputs
         self.jacks.spawn_input(
@@ -366,30 +372,30 @@ impl <'a> Gui <'a> {
         // Sliders
         self.dragables.spawn(
             FRect::new(10.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.01,
+            env_start_attack,
             (DragType::VERTICAL, OnDragBehavior::Env1Attack),
-            dragable::OnDoubleClickBehavior::SetTo(0.01),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_attack),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(49.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.5,
+            env_start_decay,
             (DragType::VERTICAL, OnDragBehavior::Env1Decay),
-            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_decay),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(87.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.0,
+            env_start_sustain,
             (DragType::VERTICAL, OnDragBehavior::Env1Sustain),
-            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_sustain),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(124.0, 666.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.2,
+            env_start_release,
             (DragType::VERTICAL, OnDragBehavior::Env1Release),
-            dragable::OnDoubleClickBehavior::SetTo(0.2),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_release),
             SLIDER_128_ANIMATION,
         ).unwrap();
 
@@ -422,30 +428,30 @@ impl <'a> Gui <'a> {
         // Sliders
         self.dragables.spawn(
             FRect::new(185.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.01,
+            env_start_attack,
             (DragType::VERTICAL, OnDragBehavior::Env2Attack),
-            dragable::OnDoubleClickBehavior::SetTo(0.01),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_attack),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(224.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.5,
+            env_start_decay,
             (DragType::VERTICAL, OnDragBehavior::Env2Decay),
-            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_decay),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(262.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.0,
+            env_start_sustain,
             (DragType::VERTICAL, OnDragBehavior::Env2Sustain),
-            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_sustain),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(299.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.2,
+            env_start_release,
             (DragType::VERTICAL, OnDragBehavior::Env2Release),
-            dragable::OnDoubleClickBehavior::SetTo(0.2),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_release),
             SLIDER_128_ANIMATION,
         ).unwrap();
 
@@ -478,30 +484,30 @@ impl <'a> Gui <'a> {
         // Sliders
         self.dragables.spawn(
             FRect::new(357.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.01,
+            env_start_attack,
             (DragType::VERTICAL, OnDragBehavior::Env3Attack),
-            dragable::OnDoubleClickBehavior::SetTo(0.01),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_attack),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(396.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.5,
+            env_start_decay,
             (DragType::VERTICAL, OnDragBehavior::Env3Decay),
-            dragable::OnDoubleClickBehavior::SetTo(0.5),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_decay),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(434.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.0,
+            env_start_sustain,
             (DragType::VERTICAL, OnDragBehavior::Env3Sustain),
-            dragable::OnDoubleClickBehavior::SetTo(0.0),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_sustain),
             SLIDER_128_ANIMATION,
         ).unwrap();
         self.dragables.spawn(
             FRect::new(471.0, 667.0, SLIDER_128_ANIMATION.width(), SLIDER_128_ANIMATION.height()),
-            0.2,
+            env_start_release,
             (DragType::VERTICAL, OnDragBehavior::Env3Release),
-            dragable::OnDoubleClickBehavior::SetTo(0.2),
+            dragable::OnDoubleClickBehavior::SetTo(env_start_release),
             SLIDER_128_ANIMATION,
         ).unwrap();
 
@@ -616,7 +622,7 @@ impl <'a> Gui <'a> {
         self.dragables.spawn(
             FRect::new(1025.0, 586.0, KNOB_128_ANIMATION.width(), KNOB_128_ANIMATION.height()),
             0.0,
-            (DragType::VERTICAL, OnDragBehavior::EffectReverbTime),
+            (DragType::VERTICAL, OnDragBehavior::EffectReverbDamp),
             dragable::OnDoubleClickBehavior::SetTo(0.0),
             KNOB_128_ANIMATION,
         ).unwrap();

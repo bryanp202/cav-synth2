@@ -14,7 +14,7 @@ use crate::audio::component::{analog, envelope, filter};
 use crate::audio::component::wavetable::{self, PolyWavetable};
 
 use crate::audio::midi::Midi;
-pub use analog::WaveShape;
+pub use component::WaveShape;
 pub use wavetable::Wavetable;
 pub use wavetable::WAVETABLE_FRAME_LENGTH;
 
@@ -80,7 +80,7 @@ pub enum OutputJack {
 pub enum AudioMessage {
     // Osc1
     Osc1Freq(f32),
-    Osc1Shape(analog::WaveShape),
+    Osc1Shape(WaveShape),
     Osc1Phase(f32),
     Osc1Level(f32),
     // Osc2
@@ -89,10 +89,10 @@ pub enum AudioMessage {
     Osc2Level(f32),
     Osc2WavetableUpdate(Arc<wavetable::Wavetable>),
     // Lfo1
-    Lfo1Shape(analog::WaveShape),
+    Lfo1Shape(WaveShape),
     Lfo1Freq(f32),
     // Flo2
-    Lfo2Shape(analog::WaveShape),
+    Lfo2Shape(WaveShape),
     Lfo2Freq(f32),
     // Filter1
     Filter1Freq(f32),
@@ -121,7 +121,8 @@ pub enum AudioMessage {
     DelayTime(f32),
     DelayWet(f32),
     // Reverb
-    ReverbTime(f32),
+    ReverbDamp(f32),
+    ReverbSpread(f32),
     ReverbWet(f32),
     // Master
     MasterGain(f32),
@@ -249,7 +250,7 @@ impl AudioState {
             env3: PolyEnvelope::new(),
             filter1: PolyFilter::new(),
             filter2: PolyFilter::new(),
-            effects_chain: EffectsChain::new(),
+            effects_chain: EffectsChain::new(sample_rate),
             cables: Cables::new(),
         };
 
@@ -326,7 +327,8 @@ impl AudioState {
                 AudioMessage::DelayFeedback(feedback) => self.effects_chain.set_delay_feedback(feedback),
                 AudioMessage::DelayTime(time) => self.effects_chain.set_delay_time(time, self.sample_rate as f32),
                 // Reverb
-                AudioMessage::ReverbTime(time) => self.effects_chain.set_reverb_time(time),
+                AudioMessage::ReverbDamp(damp) => self.effects_chain.set_reverb_damp(damp),
+                AudioMessage::ReverbSpread(spread) => self.effects_chain.set_reverb_spread(spread),
                 AudioMessage::ReverbWet(wet) => self.effects_chain.set_reverb_wet(wet),
 
                 // Master
