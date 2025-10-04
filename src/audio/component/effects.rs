@@ -43,7 +43,7 @@ impl EffectsChain {
     }
 
     pub fn set_reverb_damp(&mut self, damp: f32) {
-        self.reverb.damp = 0.2 + 0.4 * damp;
+        self.reverb.damp = 0.1 + 0.5 * damp;
     }
 
     pub fn set_reverb_spread(&mut self, spread: f32) {
