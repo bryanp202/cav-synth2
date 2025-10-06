@@ -1,5 +1,3 @@
-use std::time::{Duration, Instant};
-
 use sdl3::{render::{Canvas, FRect, Texture}, video::Window};
 
 use crate::gui::METER_MASTER_ANIMATION;

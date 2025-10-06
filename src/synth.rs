@@ -29,7 +29,6 @@ impl <'a> Synth<'a> {
         let _midi_connection = midi::setup_midi(audio_sender.clone())
             .map_err(|err| eprintln!("{}", err))
             .ok();
-        audio_sender.send(crate::audio::AudioMessage::KeyPress(60, 60)).unwrap();
         let gui = Gui::new(audio_sender, texture_creator);
 
         let mut new_synth = Self {
