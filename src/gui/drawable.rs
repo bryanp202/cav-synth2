@@ -72,12 +72,10 @@ pub fn on_mouse_move_system(drawables: &mut Drawables, x: f32, y: f32) {
     }
 }
 pub fn render_system(canvas: &mut Canvas<Window>, drawables: &Drawables) -> Result<(), sdl3::Error> {
-    canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
     canvas.set_draw_color(FColor::RGBA(0.0, 1.0, 1.0, 0.6));
     for values in drawables.values.iter() {
         canvas.draw_rects(&values)?;
     }
-    canvas.set_blend_mode(sdl3::render::BlendMode::None);
     Ok(())
 }
 

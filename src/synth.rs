@@ -5,9 +5,14 @@ use midir::MidiInputConnection;
 use sdl3::{event::Event, mouse::MouseButton, render::{Canvas, TextureCreator}, video::{Window, WindowContext}, Error, EventPump};
 use crate::gui::Gui;
 
+pub enum SynthMessage {
+    MasterMeter(f32, f32), // Need to be sqrted on use
+}
+
 pub struct Synth<'a> {
     canvas: Canvas<Window>,
     event_pump: EventPump,
+    audio_events: mpsc::Receiver<SynthMessage>,
 
     gui: Gui<'a>,
     _midi_connection: Option<MidiInputConnection<()>>,
@@ -19,15 +24,18 @@ pub struct Synth<'a> {
 impl <'a> Synth<'a> {
     pub fn init(canvas: Canvas<Window>, event_pump: EventPump, texture_creator: &'a TextureCreator<WindowContext>) -> Self {
         let (audio_sender, audio_receiver) = mpsc::channel();
-        let _stream = crate::audio::init(audio_receiver).expect("Failed to initialize audio thread");
+        let (synth_sender, audio_events) = mpsc::channel();
+        let _stream = crate::audio::init(audio_receiver, synth_sender).expect("Failed to initialize audio thread");
         let _midi_connection = midi::setup_midi(audio_sender.clone())
             .map_err(|err| eprintln!("{}", err))
             .ok();
+        audio_sender.send(crate::audio::AudioMessage::KeyPress(60, 60)).unwrap();
         let gui = Gui::new(audio_sender, texture_creator);
 
         let mut new_synth = Self {
             canvas,
             event_pump,
+            audio_events,
             _midi_connection,
             _stream,
             gui,
@@ -58,6 +66,11 @@ impl <'a> Synth<'a> {
                     };
                 },
                 _ => {},
+            }
+        }
+        for msg in self.audio_events.try_iter() {
+            match msg {
+                SynthMessage::MasterMeter(left, right) => self.gui.master_meter(left, right),
             }
         }
     }

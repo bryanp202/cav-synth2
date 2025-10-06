@@ -15,6 +15,7 @@ mod dragable;
 mod drawable;
 mod jacks;
 mod toggleable;
+mod meters;
 
 use core::f32;
 use std::sync::mpsc::Sender;
@@ -30,6 +31,7 @@ use crate::common::ComponentVec;
 use crate::gui::animation::Animation;
 use crate::gui::drawable::{Drawables, OnReleaseBehavior};
 use crate::gui::jacks::JackData;
+use crate::gui::meters::Meters;
 use crate::gui::toggleable::Toggleables;
 use crate::gui::dragable::{DragType, Dragables, OnDragBehavior};
 
@@ -62,6 +64,7 @@ pub struct Gui<'a> {
     dragables: Dragables,
     jacks: JackData,
     drawables: Drawables,
+    meters: Meters,
     // text_boxes: TextBoxes,
 
     // Textures
@@ -82,6 +85,7 @@ impl <'a> Gui <'a> {
             dragables: Dragables::init(),
             jacks: JackData::new(),
             drawables: Drawables::new(&mut fft_planner),
+            meters: Meters::new(),
             textures: ComponentVec::new(),
             texture_creator,
             _fft_planner: fft_planner,
@@ -106,6 +110,20 @@ impl <'a> Gui <'a> {
         self.init_filters();
         self.init_effects();
 
+        let left_master_meter = FRect::new(
+            1184.0 - METER_MASTER_ANIMATION.width() / 2.0,
+            576.0,
+            METER_MASTER_ANIMATION.width(),
+            METER_MASTER_ANIMATION.height()
+        );
+        let right_master_meter = FRect::new(
+            1184.0 - 1.0,
+            576.0,
+            METER_MASTER_ANIMATION.width(),
+            METER_MASTER_ANIMATION.height()
+        );
+        self.meters.init(left_master_meter, right_master_meter);
+
         // OSC 2
         self.drawables.spawn(FRect::new(502.0, 16.0, 256.0, 256.0), OnReleaseBehavior::Osc2WavetableTimeDomain).unwrap();
     }
@@ -114,8 +132,9 @@ impl <'a> Gui <'a> {
         canvas.copy(&self.textures[FACEPLATE_TEXTURE], None, None)?;
         toggleable::render_system(canvas, &self.textures, &self.toggleables)?;
         dragable::render_system(canvas, &self.textures, &self.dragables)?;
-        drawable::render_system(canvas, &self.drawables)?;
+        self.meters.render(canvas, &self.textures)?;
         canvas.set_blend_mode(sdl3::render::BlendMode::Blend);
+        drawable::render_system(canvas, &self.drawables)?;
         jacks::render_system(
             canvas,
             &self.textures,
@@ -157,6 +176,12 @@ impl <'a> Gui <'a> {
 
     pub fn text_input(&mut self, _text: String) {
 
+    }
+
+    pub fn master_meter(&mut self, left: f32, right: f32) {
+        let left_level = left.sqrt();
+        let right_level = right.sqrt();
+        self.meters.set_level(left_level, right_level);
     }
 
     fn load_texture(&mut self, img_bytes: &'static [u8]) {

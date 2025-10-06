@@ -15,6 +15,7 @@ use crate::audio::component::{analog, envelope, filter, lfo};
 use crate::audio::component::wavetable::{self, PolyWavetable};
 
 use crate::audio::midi::Midi;
+use crate::synth::SynthMessage;
 pub use component::WaveShape;
 pub use wavetable::Wavetable;
 pub use wavetable::WAVETABLE_FRAME_LENGTH;
@@ -139,27 +140,27 @@ pub enum AudioMessage {
     CableRemove(usize),
 }
 
-pub fn init(receiver: mpsc::Receiver<AudioMessage>) -> Result<cpal::Stream, String> {
-    let stream = stream_setup(receiver)?;
+pub fn init(receiver: mpsc::Receiver<AudioMessage>, sender: mpsc::Sender<SynthMessage>) -> Result<cpal::Stream, String> {
+    let stream = stream_setup(receiver, sender)?;
     stream.play().map_err(|err| format!("Error on output stream play: {err}"))?;
     Ok(stream)
 }
 
-fn stream_setup(receiver: mpsc::Receiver<AudioMessage>) -> Result<cpal::Stream, String> {
+fn stream_setup(receiver: mpsc::Receiver<AudioMessage>, sender: mpsc::Sender<SynthMessage>) -> Result<cpal::Stream, String> {
     let (_host, device, config) = host_device_setup()?;
 
      match config.sample_format() {
-        cpal::SampleFormat::I8 => make_stream::<i8>(receiver, &device, &config.into()),
-        cpal::SampleFormat::I16 => make_stream::<i16>(receiver, &device, &config.into()),
-        cpal::SampleFormat::I24 => make_stream::<I24>(receiver, &device, &config.into()),
-        cpal::SampleFormat::I32 => make_stream::<i32>(receiver, &device, &config.into()),
-        cpal::SampleFormat::I64 => make_stream::<i64>(receiver, &device, &config.into()),
-        cpal::SampleFormat::U8 => make_stream::<u8>(receiver, &device, &config.into()),
-        cpal::SampleFormat::U16 => make_stream::<u16>(receiver, &device, &config.into()),
-        cpal::SampleFormat::U32 => make_stream::<u32>(receiver, &device, &config.into()),
-        cpal::SampleFormat::U64 => make_stream::<u64>(receiver, &device, &config.into()),
-        cpal::SampleFormat::F32 => make_stream::<f32>(receiver, &device, &config.into()),
-        cpal::SampleFormat::F64 => make_stream::<f64>(receiver, &device, &config.into()),
+        cpal::SampleFormat::I8 => make_stream::<i8>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::I16 => make_stream::<i16>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::I24 => make_stream::<I24>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::I32 => make_stream::<i32>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::I64 => make_stream::<i64>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::U8 => make_stream::<u8>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::U16 => make_stream::<u16>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::U32 => make_stream::<u32>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::U64 => make_stream::<u64>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::F32 => make_stream::<f32>(receiver, sender, &device, &config.into()),
+        cpal::SampleFormat::F64 => make_stream::<f64>(receiver, sender, &device, &config.into()),
         sample_format => Err(format!(
             "Unsupported sample format '{sample_format}'"
         )),
@@ -175,24 +176,32 @@ fn host_device_setup() -> Result<(Host, Device, SupportedStreamConfig), String> 
     Ok((host, device, config))
 }
 
-fn make_stream<T>(receiver: mpsc::Receiver<AudioMessage>, device: &Device, config: &StreamConfig) -> Result<cpal::Stream, String>
+fn make_stream<T>(receiver: mpsc::Receiver<AudioMessage>, sender: mpsc::Sender<SynthMessage>, device: &Device, config: &StreamConfig) -> Result<cpal::Stream, String>
 where 
     T: SizedSample + FromSample<f32>,
 {
     let num_channels = config.channels as usize;
     assert!(num_channels == 2);
     let sample_rate = config.sample_rate.0 as f64;
-    let mut audio_state = AudioState::new(receiver, sample_rate);
+    let mut audio_state = AudioState::new(receiver, sender, sample_rate);
 
     let err_fn = |err| eprintln!("Erroring building output sound stream: {err}");
     device.build_output_stream(
         config,
         move |output: &mut [T], _: &cpal::OutputCallbackInfo| {
+            let mut meter_level_left = 0.0;
+            let mut meter_level_right = 0.0;
             for i in 0..output.len() / 2 {
                 let (left, right) = audio_state.process();
-                output[i*2] = T::from_sample(left.clamp(-1.0, 1.0));
-                output[i*2 + 1] = T::from_sample(right.clamp(-1.0, 1.0));
+                let left_clamped = left.clamp(-1.0, 1.0);
+                meter_level_left += left_clamped * left_clamped;
+                let right_clamped = right.clamp(-1.0, 1.0);
+                meter_level_right += right_clamped * right_clamped;
+
+                output[i*2] = T::from_sample(left_clamped);
+                output[i*2 + 1] = T::from_sample(right_clamped);
             }
+            audio_state.sender.send(SynthMessage::MasterMeter(meter_level_left / output.len() as f32, meter_level_right / output.len() as f32)).unwrap();
             audio_state.update();
         },
         err_fn,
@@ -226,6 +235,7 @@ const TOTAL_OUTPUT_COUNT: usize = LFO2_OUTPUT_OFFSET + lfo::TOTAL_OUTPUT_COUNT;
 
 struct AudioState {
     receiver: mpsc::Receiver<AudioMessage>,
+    sender: mpsc::Sender<SynthMessage>,
     sample_rate: f64,
     inputs: [f32; TOTAL_INPUT_COUNT],
     outputs: [f32; TOTAL_OUTPUT_COUNT],
@@ -244,9 +254,10 @@ struct AudioState {
 }
 
 impl AudioState {
-    pub fn new(receiver: mpsc::Receiver<AudioMessage>, sample_rate: f64) -> Self {
+    pub fn new(receiver: mpsc::Receiver<AudioMessage>, sender: mpsc::Sender<SynthMessage>, sample_rate: f64) -> Self {
         let mut new_state = Self {
             receiver,
+            sender,
             sample_rate,
             inputs: [0.0; TOTAL_INPUT_COUNT],
             outputs: [0.0; TOTAL_OUTPUT_COUNT],
