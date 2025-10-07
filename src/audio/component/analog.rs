@@ -45,6 +45,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyAnalog <INPUT_O
         self.level = level;
     }
 
+    #[inline(always)]
     pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32], sample_rate: f64) {
         for (analog, current_phase) in self.current_phases.iter_mut().enumerate() {
             let phase_input = inputs[INPUT_OFFSET + PHASE_INPUT + analog];

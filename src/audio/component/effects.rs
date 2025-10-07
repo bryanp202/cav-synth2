@@ -1,7 +1,7 @@
 use core::f64;
 use std::collections::VecDeque;
 
-use crate::audio::{component::filter, MAX_POLY_COUNT};
+use crate::audio::MAX_POLY_COUNT;
 
 pub struct EffectsChain {
     distortion: Distortion,
@@ -65,6 +65,7 @@ impl EffectsChain {
         self.master_gain = gain;
     }
 
+    #[inline(always)]
     pub fn render(&mut self, inputs: &[f32; MAX_POLY_COUNT]) -> (f32, f32) {
         let input = inputs.iter().sum();
         let distorted = self.distortion.render(input);
@@ -86,6 +87,7 @@ impl Distortion {
         }
     }
 
+    #[inline(always)]
     fn render(&self, input: f32) -> f32 {
         let drive_value = self.drive * input;
         let wet_value = drive_value.signum() * (1.0 - (-(drive_value.abs())).exp());
@@ -112,6 +114,7 @@ impl Delay {
         }
     }
 
+    #[inline(always)]
     fn render(&mut self, input: f32) -> f32 {
         let wet_value = self.buffer.remove(self.delay_index).unwrap_or_default();
         let out_value = input + (wet_value - input) * self.wet;
@@ -168,6 +171,7 @@ impl Reverb {
         }
     }
 
+    #[inline(always)]
     fn render(&mut self, input: f32) -> (f32, f32) {
         let input_scaled = input / 16.0;
         let mut out_l = 0.0;

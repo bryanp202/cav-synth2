@@ -32,6 +32,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyFilter <INPUT_O
         self.frequency = freq;
     }
 
+    #[inline(always)]
     pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32], sample_rate: f32) {
         for (filter, buffer) in self.buffers.iter_mut().enumerate() {
             let value_input = inputs[INPUT_OFFSET + VALUE_INPUT + filter];

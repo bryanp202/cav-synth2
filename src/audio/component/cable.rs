@@ -15,6 +15,7 @@ impl <const MAX_CABLES: usize> Cables <MAX_CABLES> {
         self.0.remove(cable_index);
     }
 
+    #[inline(always)]
     pub fn run_cables(&self, inputs: &mut [f32], outputs: &[f32]) {
         inputs.fill(0.0);
         for cable in self.0.iter() {

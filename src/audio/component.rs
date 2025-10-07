@@ -20,6 +20,7 @@ impl Default for WaveShape {
     }
 }
 
+#[inline(always)]
 pub fn calculate_freq(voltage: f32) -> f32 {
     2.0_f32.powf((128.0 * voltage - 69.0) / 12.0) * 440.0
 }
