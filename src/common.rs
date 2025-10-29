@@ -38,7 +38,7 @@ impl <T, const MAX: usize> ComponentVec<T, MAX> {
         removed
     }
 
-    pub fn iter(&self) -> std::slice::Iter<T> {
+    pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, T> {
         (self as &[T]).iter()
     }
 }

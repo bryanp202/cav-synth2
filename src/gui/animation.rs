@@ -13,6 +13,7 @@ impl Animation {
         Self { texture_index, frames, frame_w, frame_h }
     }
 
+    #[allow(dead_code)]
     pub fn new(texture_index: usize, frames: usize, frame_w: f32, frame_h: f32) -> Animation {
         Self { texture_index, frames, frame_w, frame_h }
     }

@@ -20,7 +20,9 @@ impl Meters {
     }
 
     pub fn set_level(&mut self, left: f32, right: f32) {
-        self.master_level = (left, right);
+        let left_level = (left * 10.0).min(1.0);
+        let right_level = (right * 10.0).min(1.0);
+        self.master_level = (left_level, right_level);
     }
 
     pub fn render(&self, canvas: &mut Canvas<Window>, textures: &[Texture]) -> Result<(), sdl3::Error> {

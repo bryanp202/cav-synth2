@@ -8,6 +8,7 @@ const MAX_DRAGABLE_COUNT: usize = 228;
 
 type DraggingInfo = Option<(usize, (DragType, OnDragBehavior))>;
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub enum DragType {
     VERTICAL,

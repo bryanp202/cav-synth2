@@ -63,6 +63,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyEnvelope <INPUT
         self.release = release.powf(SLIDER_EXP_RATIO) * ENV_ADR_SCALING;
     }
 
+    #[inline(always)]
     pub fn render(&mut self, inputs: &[f32], outputs: &mut [f32]) {
         for (envelope, meta) in self.envelopes.iter_mut().enumerate() {
             let velocity = inputs[INPUT_OFFSET + VELOCITY_INPUT + envelope];

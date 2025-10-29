@@ -36,6 +36,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyLfo <INPUT_OFFS
         self.phase = phase as f64;
     }
 
+    #[inline(always)]
     pub fn render(&mut self, _inputs: &[f32], outputs: &mut [f32], sample_rate: f64) {
         for (lfo, current_phase) in self.current_phases.iter_mut().enumerate() {
             let phase_increment = self.frequency / sample_rate;
