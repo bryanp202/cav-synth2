@@ -1,7 +1,7 @@
 use core::f64;
 use std::collections::VecDeque;
 
-use crate::audio::{component::filter, MAX_POLY_COUNT};
+use crate::audio::MAX_POLY_COUNT;
 
 pub struct EffectsChain {
     distortion: Distortion,

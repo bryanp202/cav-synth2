@@ -2,7 +2,7 @@ use std::sync::mpsc;
 
 use sdl3::{render::{Canvas, FRect, Texture}, video::Window};
 
-use crate::{audio::{self, AudioMessage, WaveShape}, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
+use crate::{audio::{AudioMessage, WaveShape}, common::{point_in_frect, ComponentVec}, gui::animation::Animation};
 
 const MAX_DRAGABLE_COUNT: usize = 228;
 
