@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::audio::MAX_POLY_COUNT;
 
 pub const LEVEL_INPUT: usize = 0 * MAX_POLY_COUNT;
@@ -16,7 +14,7 @@ pub const WAVETABLE_VARIATION_COUNT: usize = 8;
 pub type Wavetable = [f32; WAVETABLE_FRAME_LENGTH * WAVETABLE_VARIATION_COUNT];
 
 pub struct PolyWavetable<const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> {
-    wavetable: Arc<Wavetable>,
+    wavetable: Box<Wavetable>,
     level: f32,
     frequency: f32,
     phase: f32,
@@ -26,7 +24,7 @@ pub struct PolyWavetable<const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> 
 impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPUT_OFFSET, OUTPUT_OFFSET> {
     pub fn new() -> Self {
         Self {
-            wavetable: Arc::new([0.0; WAVETABLE_FRAME_LENGTH * WAVETABLE_VARIATION_COUNT]),
+            wavetable: Box::new([0.0; WAVETABLE_FRAME_LENGTH * WAVETABLE_VARIATION_COUNT]),
             level: 0.5,
             frequency: 0.0,
             phase: 0.0,
@@ -34,7 +32,7 @@ impl <const INPUT_OFFSET: usize, const OUTPUT_OFFSET: usize> PolyWavetable <INPU
         }
     }
 
-    pub fn update_wavetable(&mut self, new_wavetable: Arc<Wavetable>) {
+    pub fn update_wavetable(&mut self, new_wavetable: Box<Wavetable>) {
         self.wavetable = new_wavetable;
     }
 

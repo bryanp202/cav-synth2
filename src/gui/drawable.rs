@@ -99,7 +99,7 @@ fn on_release_behavior(
                 2.0 * (values[index1].h + (values[index2].h - values[index1].h) * ratio) / height
             });
 
-            let mut new_wavetable: Wavetable = [0.0; WAVETABLE_FRAME_LENGTH * 8];
+            let mut new_wavetable: Box<Wavetable> = Box::new([0.0; WAVETABLE_FRAME_LENGTH * 8]);
 
             let mut freq_domain = [Complex::zero(); PARTIAL_COUNT];
             r2c.process(&mut default_variation, &mut freq_domain).unwrap();
@@ -124,7 +124,7 @@ fn on_release_behavior(
             let max = new_wavetable.into_iter().reduce(f32::max).unwrap_or(0.0).abs();
             new_wavetable.iter_mut().for_each(|x| *x /= max);
             
-            audio_channel.send(AudioMessage::Osc2WavetableUpdate(Arc::new(new_wavetable))).unwrap();
+            audio_channel.send(AudioMessage::Osc2WavetableUpdate(new_wavetable)).unwrap();
         },
     }
 }
