@@ -21,7 +21,7 @@ pub use wavetable::Wavetable;
 pub use wavetable::WAVETABLE_FRAME_LENGTH;
 
 pub const MAX_POLY_COUNT: usize = 16;
-const MAX_CABLES: usize = 256;
+const MAX_CABLES: usize = 512;
 
 #[repr(usize)]
 #[allow(dead_code)]
@@ -64,6 +64,7 @@ pub enum InputJack {
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum OutputJack {
+    MidiDC = MIDI_OUTPUT_OFFSET + midi::DC_OUTPUT,
     MidiGate = MIDI_OUTPUT_OFFSET + midi::GATE_OUTPUT,
     MidiNote = MIDI_OUTPUT_OFFSET + midi::NOTE_OUTPUT,
     MidiVelocity = MIDI_OUTPUT_OFFSET + midi::VELOCITY_OUTPUT,
@@ -280,7 +281,7 @@ impl AudioState {
     }
 
     pub fn init(&mut self) {
-        _ = self;
+        self.outputs[MIDI_OUTPUT_OFFSET + midi::DC_OUTPUT] = 1.0;
     }
 }
 

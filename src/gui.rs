@@ -306,6 +306,10 @@ impl <'a> Gui <'a> {
 
     fn init_midi(&mut self) {
         self.jacks.spawn_output(
+            FRect::new(614.0, 379.0 + JACK_WIDTH * 3.0, JACK_WIDTH, JACK_HEIGHT),
+            OutputJack::MidiDC,
+        ).unwrap();
+        self.jacks.spawn_output(
             FRect::new(491.0, 379.0, JACK_WIDTH, JACK_HEIGHT),
             OutputJack::MidiGate,
         ).unwrap();

@@ -2,10 +2,11 @@ use std::collections::VecDeque;
 
 use crate::audio::{MAX_POLY_COUNT, MIDI_OUTPUT_OFFSET};
 
-pub const GATE_OUTPUT: usize = 0 * MAX_POLY_COUNT;
-pub const NOTE_OUTPUT: usize = 1 * MAX_POLY_COUNT;
-pub const VELOCITY_OUTPUT: usize = 2 * MAX_POLY_COUNT;
-pub const TOTAL_OUTPUT_COUNT: usize = 3 * MAX_POLY_COUNT;
+pub const DC_OUTPUT: usize = 0;
+pub const GATE_OUTPUT: usize = 0 * MAX_POLY_COUNT + 1;
+pub const NOTE_OUTPUT: usize = 1 * MAX_POLY_COUNT + 1;
+pub const VELOCITY_OUTPUT: usize = 2 * MAX_POLY_COUNT + 1;
+pub const TOTAL_OUTPUT_COUNT: usize = 3 * MAX_POLY_COUNT + 1;
 
 #[derive(Clone, Copy, Default, Debug)]
 struct Voice {
