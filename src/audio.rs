@@ -1,7 +1,7 @@
 mod component;
 mod midi;
 
-use std::sync::{mpsc, Arc};
+use std::sync::mpsc;
 
 use component::envelope::PolyEnvelope;
 use component::analog::PolyAnalog;
@@ -90,7 +90,7 @@ pub enum AudioMessage {
     Osc2Freq(f32),
     Osc2Phase(f32),
     Osc2Level(f32),
-    Osc2WavetableUpdate(Arc<wavetable::Wavetable>),
+    Osc2WavetableUpdate(Box<wavetable::Wavetable>),
     // Lfo1
     Lfo1Shape(WaveShape),
     Lfo1Freq(f32),
